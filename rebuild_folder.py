@@ -11,7 +11,7 @@ FILE_END = "========== END FILE =========="
 
 def rebuild_folder(input_path: str, output_folder: str):
     input_file = Path(input_path).resolve()
-    output_root = Path(output_folder).resolve()
+    output_root = Path(output_folder).absolute().resolve()
 
     if not input_file.is_file():
         raise ValueError(f"Input file does not exist: {input_file}")
