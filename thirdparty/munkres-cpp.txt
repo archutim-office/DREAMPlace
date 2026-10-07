@@ -1,0 +1,4246 @@
+========== FILE: .git ==========
+TYPE: UTF-8
+gitdir: ../../.git/modules/thirdparty/munkres-cpp
+========== END FILE ==========
+========== FILE: .gitignore ==========
+TYPE: UTF-8
+src/munkrestest
+*.so
+*.o
+========== END FILE ==========
+========== FILE: .travis.yml ==========
+TYPE: UTF-8
+language: cpp
+sudo: false
+compiler: gcc
+install:
+    - if [ "$CXX" = "g++" ]; then export CXX="g++-4.8"; fi
+addons:
+    apt:
+        sources:
+            - ubuntu-toolchain-r-test
+            - boost-latest
+            - kalakris-cmake
+        packages:
+            - g++-4.8
+            - gcov-4.8
+            - cmake
+            - libboost1.55-all-dev
+before_script:
+    - BUILD_DIR=`pwd`/build
+    - mkdir -p ${BUILD_DIR}
+    - cd ${BUILD_DIR}
+    - cmake -DCMAKE_BUILD_TYPE=Debug -DMUNKRESCPP_DEVEL_MODE=ON ${BUILD_DIR}/..
+script:
+    - cd ${BUILD_DIR}
+    - make && make tests
+    - cd ${BUILD_DIR}/tests && ./munkrestest > /dev/null
+after_success:
+    - cd ${BUILD_DIR}
+    - mkdir coverage
+    - cp -v ../src/*.cpp coverage
+    - mv tests/CMakeFiles/munkrestest.dir/__/src/*.gcda coverage
+    - mv tests/CMakeFiles/munkrestest.dir/__/src/*.gcno coverage
+    - cd coverage
+    - find . -type f -name '*.gcda' -exec gcov-4.8 {} +
+    - bash <(curl -s https://codecov.io/bash)
+========== END FILE ==========
+========== FILE: AUTHORS.txt ==========
+TYPE: UTF-8
+
+The following is a list of much appreciated contributors:
+
+
+John Weaver <github@saebyn.info>
+Gluttton <gluttton@ukr.net>
+========== END FILE ==========
+========== FILE: CMakeLists.txt ==========
+TYPE: UTF-8
+# Common variables.
+cmake_minimum_required  (VERSION 2.8)
+project                 (munkres-cpp)
+set (munkres-cpp_VERSION_MAJOR 2)
+set (munkres-cpp_VERSION_MINOR 0)
+
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra")
+set (CMAKE_CXX_FLAGS_DEBUG   "${CMAKE_CXX_FLAGS} -O0 -ggdb3 -DDEBUG")
+set (CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} -O3")
+
+include_directories (${PROJECT_SOURCE_DIR}/src)
+include_directories (${PROJECT_SOURCE_DIR}/src/adapters)
+
+# Sources.
+set (
+    MunkresCppLib_SOURCES
+    ${PROJECT_SOURCE_DIR}/src/munkres.cpp
+)
+
+# Headers.
+set (
+    MunkresCppLib_HEADERS
+    ${PROJECT_SOURCE_DIR}/src/matrix.h
+    ${PROJECT_SOURCE_DIR}/src/matrix.cpp
+    ${PROJECT_SOURCE_DIR}/src/munkres.h
+
+)
+
+add_subdirectory(${PROJECT_SOURCE_DIR}/src/adapters)
+
+# Library.
+add_library (
+    munkres STATIC
+    ${MunkresCppLib_SOURCES}
+)
+
+install (TARGETS munkres                DESTINATION lib     PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ)
+install (FILES ${MunkresCppLib_HEADERS} DESTINATION include/munkres PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ)
+
+
+# Binary example
+set (MunkresCppBin_SOURCES ${PROJECT_SOURCE_DIR}/examples/main.cpp)
+add_executable (munkres.bin EXCLUDE_FROM_ALL ${MunkresCppBin_SOURCES})
+target_link_libraries (munkres.bin munkres)
+add_custom_target (example)
+add_dependencies  (example munkres.bin)
+
+option(MUNKRESCPP_DEVEL_MODE "Configure project in development mode." OFF)
+if (MUNKRESCPP_DEVEL_MODE)
+    # Enable the ExternalProject_Add directive.
+    # Which used for getting external tools for the Project.
+    include (ExternalProject)
+
+
+    # Testing
+    add_subdirectory (tests)
+
+
+    # Benchmarking
+    add_subdirectory (benchmarks)
+
+
+    # Custom target to build everything.
+    add_custom_target  (full)
+    add_dependencies (
+        full
+        munkres
+        example
+        tests
+        benchmarks
+    )
+
+    # celero needs curses library
+    #find_package(Curses)
+    #include_directories(${CURSES_INCLUDE_DIR})
+
+    # Static code analyse.
+    set (CppCheck_REPORT ${PROJECT_BINARY_DIR}/cppcheck.report)
+    add_custom_command (
+        OUTPUT  ${CppCheck_REPORT}
+        COMMAND cppcheck ${MunkresCppLib_SOURCES} ${MunkresCppBin_SOURCES} -I${PROJECT_SOURCE_DIR}/src -I${PROJECT_SOURCE_DIR} --enable=all --force --inconclusive > cppcheck.report 2>&1
+    )
+    add_custom_target  (cppcheck DEPENDS ${CppCheck_REPORT})
+    set_directory_properties (PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES ${CppCheck_REPORT})
+endif (MUNKRESCPP_DEVEL_MODE)
+========== END FILE ==========
+========== FILE: COPYING ==========
+TYPE: UTF-8
+		    GNU GENERAL PUBLIC LICENSE
+		       Version 2, June 1991
+
+ Copyright (C) 1989, 1991 Free Software Foundation, Inc.
+                       51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+ Everyone is permitted to copy and distribute verbatim copies
+ of this license document, but changing it is not allowed.
+
+			    Preamble
+
+  The licenses for most software are designed to take away your
+freedom to share and change it.  By contrast, the GNU General Public
+License is intended to guarantee your freedom to share and change free
+software--to make sure the software is free for all its users.  This
+General Public License applies to most of the Free Software
+Foundation's software and to any other program whose authors commit to
+using it.  (Some other Free Software Foundation software is covered by
+the GNU Library General Public License instead.)  You can apply it to
+your programs, too.
+
+  When we speak of free software, we are referring to freedom, not
+price.  Our General Public Licenses are designed to make sure that you
+have the freedom to distribute copies of free software (and charge for
+this service if you wish), that you receive source code or can get it
+if you want it, that you can change the software or use pieces of it
+in new free programs; and that you know you can do these things.
+
+  To protect your rights, we need to make restrictions that forbid
+anyone to deny you these rights or to ask you to surrender the rights.
+These restrictions translate to certain responsibilities for you if you
+distribute copies of the software, or if you modify it.
+
+  For example, if you distribute copies of such a program, whether
+gratis or for a fee, you must give the recipients all the rights that
+you have.  You must make sure that they, too, receive or can get the
+source code.  And you must show them these terms so they know their
+rights.
+
+  We protect your rights with two steps: (1) copyright the software, and
+(2) offer you this license which gives you legal permission to copy,
+distribute and/or modify the software.
+
+  Also, for each author's protection and ours, we want to make certain
+that everyone understands that there is no warranty for this free
+software.  If the software is modified by someone else and passed on, we
+want its recipients to know that what they have is not the original, so
+that any problems introduced by others will not reflect on the original
+authors' reputations.
+
+  Finally, any free program is threatened constantly by software
+patents.  We wish to avoid the danger that redistributors of a free
+program will individually obtain patent licenses, in effect making the
+program proprietary.  To prevent this, we have made it clear that any
+patent must be licensed for everyone's free use or not licensed at all.
+
+  The precise terms and conditions for copying, distribution and
+modification follow.
+
+		    GNU GENERAL PUBLIC LICENSE
+   TERMS AND CONDITIONS FOR COPYING, DISTRIBUTION AND MODIFICATION
+
+  0. This License applies to any program or other work which contains
+a notice placed by the copyright holder saying it may be distributed
+under the terms of this General Public License.  The "Program", below,
+refers to any such program or work, and a "work based on the Program"
+means either the Program or any derivative work under copyright law:
+that is to say, a work containing the Program or a portion of it,
+either verbatim or with modifications and/or translated into another
+language.  (Hereinafter, translation is included without limitation in
+the term "modification".)  Each licensee is addressed as "you".
+
+Activities other than copying, distribution and modification are not
+covered by this License; they are outside its scope.  The act of
+running the Program is not restricted, and the output from the Program
+is covered only if its contents constitute a work based on the
+Program (independent of having been made by running the Program).
+Whether that is true depends on what the Program does.
+
+  1. You may copy and distribute verbatim copies of the Program's
+source code as you receive it, in any medium, provided that you
+conspicuously and appropriately publish on each copy an appropriate
+copyright notice and disclaimer of warranty; keep intact all the
+notices that refer to this License and to the absence of any warranty;
+and give any other recipients of the Program a copy of this License
+along with the Program.
+
+You may charge a fee for the physical act of transferring a copy, and
+you may at your option offer warranty protection in exchange for a fee.
+
+  2. You may modify your copy or copies of the Program or any portion
+of it, thus forming a work based on the Program, and copy and
+distribute such modifications or work under the terms of Section 1
+above, provided that you also meet all of these conditions:
+
+    a) You must cause the modified files to carry prominent notices
+    stating that you changed the files and the date of any change.
+
+    b) You must cause any work that you distribute or publish, that in
+    whole or in part contains or is derived from the Program or any
+    part thereof, to be licensed as a whole at no charge to all third
+    parties under the terms of this License.
+
+    c) If the modified program normally reads commands interactively
+    when run, you must cause it, when started running for such
+    interactive use in the most ordinary way, to print or display an
+    announcement including an appropriate copyright notice and a
+    notice that there is no warranty (or else, saying that you provide
+    a warranty) and that users may redistribute the program under
+    these conditions, and telling the user how to view a copy of this
+    License.  (Exception: if the Program itself is interactive but
+    does not normally print such an announcement, your work based on
+    the Program is not required to print an announcement.)
+
+These requirements apply to the modified work as a whole.  If
+identifiable sections of that work are not derived from the Program,
+and can be reasonably considered independent and separate works in
+themselves, then this License, and its terms, do not apply to those
+sections when you distribute them as separate works.  But when you
+distribute the same sections as part of a whole which is a work based
+on the Program, the distribution of the whole must be on the terms of
+this License, whose permissions for other licensees extend to the
+entire whole, and thus to each and every part regardless of who wrote it.
+
+Thus, it is not the intent of this section to claim rights or contest
+your rights to work written entirely by you; rather, the intent is to
+exercise the right to control the distribution of derivative or
+collective works based on the Program.
+
+In addition, mere aggregation of another work not based on the Program
+with the Program (or with a work based on the Program) on a volume of
+a storage or distribution medium does not bring the other work under
+the scope of this License.
+
+  3. You may copy and distribute the Program (or a work based on it,
+under Section 2) in object code or executable form under the terms of
+Sections 1 and 2 above provided that you also do one of the following:
+
+    a) Accompany it with the complete corresponding machine-readable
+    source code, which must be distributed under the terms of Sections
+    1 and 2 above on a medium customarily used for software interchange; or,
+
+    b) Accompany it with a written offer, valid for at least three
+    years, to give any third party, for a charge no more than your
+    cost of physically performing source distribution, a complete
+    machine-readable copy of the corresponding source code, to be
+    distributed under the terms of Sections 1 and 2 above on a medium
+    customarily used for software interchange; or,
+
+    c) Accompany it with the information you received as to the offer
+    to distribute corresponding source code.  (This alternative is
+    allowed only for noncommercial distribution and only if you
+    received the program in object code or executable form with such
+    an offer, in accord with Subsection b above.)
+
+The source code for a work means the preferred form of the work for
+making modifications to it.  For an executable work, complete source
+code means all the source code for all modules it contains, plus any
+associated interface definition files, plus the scripts used to
+control compilation and installation of the executable.  However, as a
+special exception, the source code distributed need not include
+anything that is normally distributed (in either source or binary
+form) with the major components (compiler, kernel, and so on) of the
+operating system on which the executable runs, unless that component
+itself accompanies the executable.
+
+If distribution of executable or object code is made by offering
+access to copy from a designated place, then offering equivalent
+access to copy the source code from the same place counts as
+distribution of the source code, even though third parties are not
+compelled to copy the source along with the object code.
+
+  4. You may not copy, modify, sublicense, or distribute the Program
+except as expressly provided under this License.  Any attempt
+otherwise to copy, modify, sublicense or distribute the Program is
+void, and will automatically terminate your rights under this License.
+However, parties who have received copies, or rights, from you under
+this License will not have their licenses terminated so long as such
+parties remain in full compliance.
+
+  5. You are not required to accept this License, since you have not
+signed it.  However, nothing else grants you permission to modify or
+distribute the Program or its derivative works.  These actions are
+prohibited by law if you do not accept this License.  Therefore, by
+modifying or distributing the Program (or any work based on the
+Program), you indicate your acceptance of this License to do so, and
+all its terms and conditions for copying, distributing or modifying
+the Program or works based on it.
+
+  6. Each time you redistribute the Program (or any work based on the
+Program), the recipient automatically receives a license from the
+original licensor to copy, distribute or modify the Program subject to
+these terms and conditions.  You may not impose any further
+restrictions on the recipients' exercise of the rights granted herein.
+You are not responsible for enforcing compliance by third parties to
+this License.
+
+  7. If, as a consequence of a court judgment or allegation of patent
+infringement or for any other reason (not limited to patent issues),
+conditions are imposed on you (whether by court order, agreement or
+otherwise) that contradict the conditions of this License, they do not
+excuse you from the conditions of this License.  If you cannot
+distribute so as to satisfy simultaneously your obligations under this
+License and any other pertinent obligations, then as a consequence you
+may not distribute the Program at all.  For example, if a patent
+license would not permit royalty-free redistribution of the Program by
+all those who receive copies directly or indirectly through you, then
+the only way you could satisfy both it and this License would be to
+refrain entirely from distribution of the Program.
+
+If any portion of this section is held invalid or unenforceable under
+any particular circumstance, the balance of the section is intended to
+apply and the section as a whole is intended to apply in other
+circumstances.
+
+It is not the purpose of this section to induce you to infringe any
+patents or other property right claims or to contest validity of any
+such claims; this section has the sole purpose of protecting the
+integrity of the free software distribution system, which is
+implemented by public license practices.  Many people have made
+generous contributions to the wide range of software distributed
+through that system in reliance on consistent application of that
+system; it is up to the author/donor to decide if he or she is willing
+to distribute software through any other system and a licensee cannot
+impose that choice.
+
+This section is intended to make thoroughly clear what is believed to
+be a consequence of the rest of this License.
+
+  8. If the distribution and/or use of the Program is restricted in
+certain countries either by patents or by copyrighted interfaces, the
+original copyright holder who places the Program under this License
+may add an explicit geographical distribution limitation excluding
+those countries, so that distribution is permitted only in or among
+countries not thus excluded.  In such case, this License incorporates
+the limitation as if written in the body of this License.
+
+  9. The Free Software Foundation may publish revised and/or new versions
+of the General Public License from time to time.  Such new versions will
+be similar in spirit to the present version, but may differ in detail to
+address new problems or concerns.
+
+Each version is given a distinguishing version number.  If the Program
+specifies a version number of this License which applies to it and "any
+later version", you have the option of following the terms and conditions
+either of that version or of any later version published by the Free
+Software Foundation.  If the Program does not specify a version number of
+this License, you may choose any version ever published by the Free Software
+Foundation.
+
+  10. If you wish to incorporate parts of the Program into other free
+programs whose distribution conditions are different, write to the author
+to ask for permission.  For software which is copyrighted by the Free
+Software Foundation, write to the Free Software Foundation; we sometimes
+make exceptions for this.  Our decision will be guided by the two goals
+of preserving the free status of all derivatives of our free software and
+of promoting the sharing and reuse of software generally.
+
+			    NO WARRANTY
+
+  11. BECAUSE THE PROGRAM IS LICENSED FREE OF CHARGE, THERE IS NO WARRANTY
+FOR THE PROGRAM, TO THE EXTENT PERMITTED BY APPLICABLE LAW.  EXCEPT WHEN
+OTHERWISE STATED IN WRITING THE COPYRIGHT HOLDERS AND/OR OTHER PARTIES
+PROVIDE THE PROGRAM "AS IS" WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESSED
+OR IMPLIED, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE.  THE ENTIRE RISK AS
+TO THE QUALITY AND PERFORMANCE OF THE PROGRAM IS WITH YOU.  SHOULD THE
+PROGRAM PROVE DEFECTIVE, YOU ASSUME THE COST OF ALL NECESSARY SERVICING,
+REPAIR OR CORRECTION.
+
+  12. IN NO EVENT UNLESS REQUIRED BY APPLICABLE LAW OR AGREED TO IN WRITING
+WILL ANY COPYRIGHT HOLDER, OR ANY OTHER PARTY WHO MAY MODIFY AND/OR
+REDISTRIBUTE THE PROGRAM AS PERMITTED ABOVE, BE LIABLE TO YOU FOR DAMAGES,
+INCLUDING ANY GENERAL, SPECIAL, INCIDENTAL OR CONSEQUENTIAL DAMAGES ARISING
+OUT OF THE USE OR INABILITY TO USE THE PROGRAM (INCLUDING BUT NOT LIMITED
+TO LOSS OF DATA OR DATA BEING RENDERED INACCURATE OR LOSSES SUSTAINED BY
+YOU OR THIRD PARTIES OR A FAILURE OF THE PROGRAM TO OPERATE WITH ANY OTHER
+PROGRAMS), EVEN IF SUCH HOLDER OR OTHER PARTY HAS BEEN ADVISED OF THE
+POSSIBILITY OF SUCH DAMAGES.
+
+		     END OF TERMS AND CONDITIONS
+
+	    How to Apply These Terms to Your New Programs
+
+  If you develop a new program, and you want it to be of the greatest
+possible use to the public, the best way to achieve this is to make it
+free software which everyone can redistribute and change under these terms.
+
+  To do so, attach the following notices to the program.  It is safest
+to attach them to the start of each source file to most effectively
+convey the exclusion of warranty; and each file should have at least
+the "copyright" line and a pointer to where the full notice is found.
+
+    <one line to give the program's name and a brief idea of what it does.>
+    Copyright (C) <year>  <name of author>
+
+    This program is free software; you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation; either version 2 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+
+
+Also add information on how to contact you by electronic and paper mail.
+
+If the program is interactive, make it output a short notice like this
+when it starts in an interactive mode:
+
+    Gnomovision version 69, Copyright (C) year name of author
+    Gnomovision comes with ABSOLUTELY NO WARRANTY; for details type `show w'.
+    This is free software, and you are welcome to redistribute it
+    under certain conditions; type `show c' for details.
+
+The hypothetical commands `show w' and `show c' should show the appropriate
+parts of the General Public License.  Of course, the commands you use may
+be called something other than `show w' and `show c'; they could even be
+mouse-clicks or menu items--whatever suits your program.
+
+You should also get your employer (if you work as a programmer) or your
+school, if any, to sign a "copyright disclaimer" for the program, if
+necessary.  Here is a sample; alter the names:
+
+  Yoyodyne, Inc., hereby disclaims all copyright interest in the program
+  `Gnomovision' (which makes passes at compilers) written by James Hacker.
+
+  <signature of Ty Coon>, 1 April 1989
+  Ty Coon, President of Vice
+
+This General Public License does not permit incorporating your program into
+proprietary programs.  If your program is a subroutine library, you may
+consider it more useful to permit linking proprietary applications with the
+library.  If this is what you want to do, use the GNU Library General
+Public License instead of this License.
+========== END FILE ==========
+========== FILE: README.md ==========
+TYPE: UTF-8
+munkres-cpp
+===========
+
+[![build](https://travis-ci.org/saebyn/munkres-cpp.svg?branch=master)](https://travis-ci.org/saebyn/munkres-cpp)
+[![codecov.io](http://codecov.io/github/saebyn/munkres-cpp/coverage.svg?branch=master)](http://codecov.io/github/saebyn/munkres-cpp?branch=master)
+
+
+An implementation of the Kuhn–Munkres algorithm.
+
+
+
+License
+-------
+
+Copyright (c) 2007-2013 John Weaver and contributors.  
+Licensed under the GPLv2. See the file COPYING for details.
+
+
+
+Requirements
+------------
+
+For use:  
+ - C++ compiler with C++11 support.  
+
+
+For development:  
+ - [GCC](https://gcc.gnu.org/) (tested on 4.6.3, 4.8);  
+ - [GNU Make](https://www.gnu.org/software/make/);  
+ - [CMake](http://www.cmake.org/) (2.8.12);  
+ - the test suite requires the [Google C++ Test Framework](http://code.google.com/p/googletest/);  
+ - microbenchmarking requires [Benchmark](https://github.com/google/benchmark), [Celero](https://github.com/DigitalInBlue/Celero), [Hayai](https://github.com/nickbruun/hayai) and [gprof](http://www.gnu.org/software/binutils/);  
+ - code coverage requires [gcov](https://gcc.gnu.org/onlinedocs/gcc/Gcov.html) and lcov;  
+ - static code analyzer requires [cppcheck](https://github.com/danmar/cppcheck).  
+
+
+
+Portability
+-----------
+
+The project is developed under the GNU/Linux OS with the gcc compiler and usually not tested under other OSs and compilers.
+But the project does not use OS or compiler specific features (types, attributes, etc) so it's expected that the project will be normally work under other platforms.
+
+
+
+Usage
+-----
+
+These steps are the easiest way to get started:
+  - download: ```$ git clone https://github.com/saebyn/munkres-cpp.git && cd munkres-cpp```  
+  - build: ```$ mkdir build && cd build && cmake .. && make```  
+  - install: ``` $ make install```  
+
+
+
+Example
+-------
+
+TBD
+
+
+
+Development
+-----------
+
+For development purpose, the project implements a variety of build targets.
+All of them help to continuously check correctness of algorithm implementation, performance, memory management, etc.
+Pass the```-DMUNKRESCPP_DEVEL_MODE=ON``` option to CMake to enable development mode.
+
+# Running unit tests:
+
+Build and execute the test suite with these commands:
+```
+$ git clone https://github.com/saebyn/munkres-cpp.git
+$ cd munkres-cpp
+$ mkdir build && cd build
+$ cmake -DCMAKE_BUILD_TYPE=Debug -DMUNKRESCPP_DEVEL_MODE=ON ..
+$ make tests
+$ tests/munkrestest
+```
+
+
+# Running code coverage analyzer:
+
+You must compile unit tests in debug mode to get a correct code coverage report.
+```
+$ <build and Launch unit tests>
+$ make coverage
+$ firefox coverage/index.html &
+```
+
+
+# Running the memory profiler:
+
+Since the unit tests call all functions which implement the algorithm, using valgrind on the unit test runner is an appropriate way to check memory management.
+```
+$ <build unit tests>
+$ valgrind tests/munkrestest
+```
+
+
+# Running the microbenchmarks:
+
+First, build them:
+```
+$ git clone https://github.com/saebyn/munkres-cpp.git
+$ cd munkres-cpp
+$ mkdir build && cd build
+$ cmake -DCMAKE_BUILD_TYPE=Release -DMUNKRESCPP_DEVEL_MODE=ON ..
+$ make benchmarks
+```
+
+To get comparable results it's required to generate the data set wich will be used for all benchmarks:
+```
+$ benchmarks/tools/generator/matrixgenerator.bin {dim_1 dim_2 ... dim_n}
+```
+Where every ```dim_x``` parameter generates a square matrix with ```dim_x``` dimension.
+To launch microbenchmarks, perform the following commands:
+```
+$ benchmarks/tests/munkresbenchmark_celero.bin
+$ benchmarks/tests/munkresbenchmark_google.bin
+$ benchmarks/tests/munkresbenchmark_hayai.bin
+$ benchmarks/tests/munkresbenchmark_rdtsc.bin
+```
+
+
+# Getting performance profiling:
+
+```
+$ <build microbenchmarks and generate data set>
+$ benchmarks/tests/munkresbenchmark_gprof.bin
+$ gprof benchmarks/tests/munkresbenchmark_gprof.bin gmon.out -p -b
+```
+
+
+# Running the static code analyzer:
+
+```
+$ make cppcheck
+```
+
+
+# Running the code formatter:
+
+TBD
+
+
+
+Bug reporting and work to be done
+---------------------------------
+
+Check the [issues list at GitHub](https://github.com/saebyn/munkres-cpp/issues?state=open).
+========== END FILE ==========
+========== FILE: benchmarks/CMakeLists.txt ==========
+TYPE: UTF-8
+# Common variables.
+add_subdirectory (tools/generator)
+add_subdirectory (tests)
+========== END FILE ==========
+========== FILE: benchmarks/tests/CMakeLists.txt ==========
+TYPE: UTF-8
+# Common variable.
+include_directories (${PROJECT_SOURCE_DIR}/benchmarks/tools/generator)
+
+
+# Benchmark based on the Google benchmark Framework.
+ExternalProject_Add (
+    benchmark
+    GIT_REPOSITORY "https://github.com/google/benchmark.git"
+    CMAKE_ARGS "-DBENCHMARK_ENABLE_TESTING=OFF;-DCMAKE_BUILD_TYPE=Release"
+    SOURCE_DIR "${PROJECT_BINARY_DIR}/benchmark"
+    BINARY_DIR "${PROJECT_BINARY_DIR}/benchmark"
+    INSTALL_COMMAND ""
+    TEST_COMMAND ""
+)
+set_target_properties (benchmark PROPERTIES EXCLUDE_FROM_ALL TRUE)
+set (GBENCHMARK_FOUND true)
+set (GBENCHMARK_INCLUDE_DIR "${PROJECT_BINARY_DIR}/benchmark/include")
+set (GBENCHMARK_LIBRARY "${PROJECT_BINARY_DIR}/benchmark/src/libbenchmark.a")
+
+set (MunkresCppBenchmarkGoogle_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/main_google.cpp)
+add_executable (munkresbenchmark_google.bin EXCLUDE_FROM_ALL ${MunkresCppBenchmarkGoogle_SOURCES})
+include_directories (${GBENCHMARK_INCLUDE_DIR})
+target_link_libraries (munkresbenchmark_google.bin munkres ${GBENCHMARK_LIBRARY} pthread)
+add_dependencies (munkresbenchmark_google.bin benchmark)
+
+
+# Benchmark based on the hayai Framework.
+ExternalProject_Add (
+    hayai
+    GIT_REPOSITORY "https://github.com/nickbruun/hayai.git"
+    SOURCE_DIR "${PROJECT_BINARY_DIR}/hayai"
+    BUILD_COMMAND ""
+    INSTALL_COMMAND ""
+    TEST_COMMAND ""
+)
+set_target_properties (hayai PROPERTIES EXCLUDE_FROM_ALL TRUE)
+set (HAYAI_FOUND true)
+set (HAYAI_INCLUDE_DIR "${PROJECT_BINARY_DIR}/hayai/src")
+
+set (MunkresCppBenchmarkHayai_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/main_hayai.cpp)
+add_executable (munkresbenchmark_hayai.bin EXCLUDE_FROM_ALL ${MunkresCppBenchmarkHayai_SOURCES})
+include_directories (${HAYAI_INCLUDE_DIR})
+target_link_libraries (munkresbenchmark_hayai.bin munkres)
+add_dependencies (munkresbenchmark_hayai.bin hayai)
+
+
+# Benchmark based on the Celero Framework.
+ExternalProject_Add (
+    Celero
+    GIT_REPOSITORY "https://github.com/DigitalInBlue/Celero.git"
+    CMAKE_ARGS "-DCELERO_ENABLE_EXPERIMENTS=OFF;-DCMAKE_BUILD_TYPE=Release"
+    SOURCE_DIR "${PROJECT_BINARY_DIR}/Celero"
+    BINARY_DIR "${PROJECT_BINARY_DIR}/CeleroBuild"
+    INSTALL_COMMAND ""
+    TEST_COMMAND ""
+)
+set_target_properties (Celero PROPERTIES EXCLUDE_FROM_ALL TRUE)
+set (CELERO_FOUND true)
+set (CELERO_INCLUDE_DIR "${PROJECT_BINARY_DIR}/Celero/include")
+set (CELERO_LIBRARY "${PROJECT_BINARY_DIR}/CeleroBuild/libcelero.so")
+
+set (MunkresCppBenchmarkCelero_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/main_celero.cpp)
+add_executable (munkresbenchmark_celero.bin EXCLUDE_FROM_ALL ${MunkresCppBenchmarkCelero_SOURCES})
+include_directories (${CELERO_INCLUDE_DIR})
+target_link_libraries (munkresbenchmark_celero.bin munkres ${CELERO_LIBRARY})
+add_dependencies (munkresbenchmark_celero.bin Celero)
+
+
+# Benchmark based on the RDTSC.
+set (MunkresCppBenchmarkRdtsc_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/main_rdtsc.cpp)
+add_executable (munkresbenchmark_rdtsc.bin EXCLUDE_FROM_ALL ${MunkresCppBenchmarkRdtsc_SOURCES})
+target_link_libraries (munkresbenchmark_rdtsc.bin munkres)
+
+
+# Test for generate profiler (gprof) data.
+set (MunkresCppBenchmarkGprof_SOURCES
+    ${PROJECT_SOURCE_DIR}/src/munkres.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/main_gprof.cpp
+)
+add_executable (munkresbenchmark_gprof.bin EXCLUDE_FROM_ALL ${MunkresCppBenchmarkGprof_SOURCES})
+set_target_properties (munkresbenchmark_gprof.bin PROPERTIES COMPILE_FLAGS "${CMAKE_CXX_FLAGS} -pg" LINK_FLAGS "-pg")
+
+
+# Prevent launch tests before will be generated test data set.
+set (BenchmarkDataSet ${PROJECT_BINARY_DIR}/matrices.txt)
+add_custom_command (
+    OUTPUT ${BenchmarkDataSet}
+    COMMAND cd ${PROJECT_BINARY_DIR} && ./benchmarks/tools/generator/matrixgenerator.bin 20
+)
+add_custom_target (generate_benchmark_dataset DEPENDS ${BenchmarkDataSet})
+add_dependencies (generate_benchmark_dataset matrixgenerator.bin)
+
+add_dependencies (munkresbenchmark_google.bin generate_benchmark_dataset)
+add_dependencies (munkresbenchmark_hayai.bin  generate_benchmark_dataset)
+add_dependencies (munkresbenchmark_celero.bin generate_benchmark_dataset)
+add_dependencies (munkresbenchmark_rdtsc.bin  generate_benchmark_dataset)
+add_dependencies (munkresbenchmark_gprof.bin  generate_benchmark_dataset)
+
+
+add_custom_target  (benchmarks)
+add_dependencies (
+    benchmarks
+    munkresbenchmark_google.bin
+    munkresbenchmark_celero.bin
+    munkresbenchmark_hayai.bin
+    munkresbenchmark_rdtsc.bin
+    munkresbenchmark_gprof.bin
+    matrixgenerator.bin
+)
+========== END FILE ==========
+========== FILE: benchmarks/tests/main_celero.cpp ==========
+TYPE: UTF-8
+#include <celero/Celero.h>
+#include <vector>
+
+#include "matrixutils.h"
+#include "munkres.h"
+
+
+
+std::vector <Matrix <double> *> matrices;
+
+size_t i {0};
+
+
+
+class MunkresFixture : public celero::TestFixture
+{
+    public:
+        void setUp (int64_t) override
+        {
+            matrix = * matrices [i];
+        }
+
+        Munkres munkres;
+        Matrix <double> matrix;
+};
+
+
+
+BASELINE_F (Munkres, Solve, MunkresFixture, 5000, 1)
+{
+    munkres.solve (matrix);
+}
+
+
+
+BENCHMARK_F (Munkres, Solve, MunkresFixture, 5000, 1)
+{
+    munkres.solve (matrix);
+}
+
+
+
+// Main function.
+int main (int argc, char * argv [])
+{
+    read <double> (matrices);
+
+    for (const auto x : matrices) {
+        celero::Run (argc, argv);
+        ++i;
+    }
+}
+========== END FILE ==========
+========== FILE: benchmarks/tests/main_google.cpp ==========
+TYPE: UTF-8
+#include <benchmark/benchmark.h>
+//#include <gtest/gtest.h>
+#include <vector>
+
+#include "matrixutils.h"
+#include "munkres.h"
+
+
+
+std::vector <Matrix <double> *> matrices;
+
+constexpr int maxReasonableDataSetCount {100};
+
+
+
+static void BM_solve (benchmark::State & state)
+{
+    state.PauseTiming ();
+    if (state.range_x () < matrices.size () ) {
+        Munkres munkres;
+        while (state.KeepRunning () ) {
+            auto matrix = * matrices [state.range_x ()];
+            state.ResumeTiming ();
+            munkres.solve (matrix);
+            state.PauseTiming ();
+        }
+    }
+}
+BENCHMARK (BM_solve)->DenseRange (0, maxReasonableDataSetCount);
+
+
+
+// Main function.
+int main (int argc, char * argv [])
+{
+    read <double> (matrices);
+
+    benchmark::Initialize (& argc, const_cast <const char **> (argv) );
+    benchmark::RunSpecifiedBenchmarks ();
+}
+========== END FILE ==========
+========== FILE: benchmarks/tests/main_gprof.cpp ==========
+TYPE: UTF-8
+#include <vector>
+
+#include "matrixutils.h"
+#include "munkres.h"
+
+
+
+// Main function.
+int main (int argc, char * argv [])
+{
+    std::vector <Matrix <double> *> matrices;
+    read <double> (matrices);
+
+
+    for (size_t i = 0; i < matrices.size (); ++i) {
+        std::cout << "Test case " << i + 1 << " from " << matrices.size () << std::endl;
+        Munkres munkres;
+        auto matrix = * matrices [i];
+        munkres.solve (matrix);
+    }
+}
+========== END FILE ==========
+========== FILE: benchmarks/tests/main_hayai.cpp ==========
+TYPE: UTF-8
+#include <hayai.hpp>
+#include <vector>
+
+#include "matrixutils.h"
+#include "munkres.h"
+
+
+
+std::vector <Matrix <double> *> matrices;
+
+size_t i {0};
+
+
+
+class MunkresFixture : public ::hayai::Fixture
+{
+    public:
+        void SetUp () override
+        {
+            matrix = * matrices [i];
+        }
+
+        Munkres munkres;
+        Matrix <double> matrix;
+};
+
+
+
+BENCHMARK_F (MunkresFixture, Solve, 5000, 1)
+{
+    munkres.solve (matrix);
+}
+
+
+
+// Main function.
+int main (int argc, char * argv [])
+{
+    read <double> (matrices);
+
+    hayai::ConsoleOutputter consoleOutputter;
+    hayai::Benchmarker::AddOutputter (consoleOutputter);
+    for (const auto x : matrices) {
+        hayai::Benchmarker::RunAllTests ();
+        ++i;
+    }
+}
+========== END FILE ==========
+========== FILE: benchmarks/tests/main_rdtsc.cpp ==========
+TYPE: UTF-8
+//#include <gtest/gtest.h>
+#include <vector>
+#include <limits>
+#include <string>
+
+#include "matrixutils.h"
+#include "munkres.h"
+
+
+
+// Main function.
+int main (int argc, char * argv [])
+{
+    std::vector <Matrix <double> *> matrices;
+    read <double> (matrices);
+
+
+    size_t iterations  = 1000;
+    size_t runs        = 10;
+    if (3 == argc) {
+        runs        = std::stoi (argv [1]);
+        iterations  = std::stoi (argv [2]);
+    }
+    std::cout << "Prepare to launch " << runs << " runs with " << iterations << " iterations each." << std::endl;
+
+    for (size_t i = 0; i < matrices.size (); ++i) {
+        std::cout << "Test case " << i + 1 << " from " << matrices.size () << std::endl;
+        uint64_t rdtscMin = std::numeric_limits <uint64_t>::max ();
+        for (size_t j = 0; j < runs; ++j) {
+            uint64_t rdtscMinRun = std::numeric_limits <uint64_t>::max ();
+            for (size_t k = 0; k < iterations; ++k) {
+                Munkres munkres;
+                auto matrix = * matrices [i];
+                uint64_t rdtsc = __rdtsc ();
+                munkres.solve (matrix);
+                rdtsc = __rdtsc () - rdtsc;
+                rdtscMinRun = std::min (rdtscMinRun, rdtsc);
+            }
+            std::cout << "Run " << std::setw (4) << j << ": " << rdtscMinRun << std::endl;
+            rdtscMin = std::min (rdtscMin, rdtscMinRun);
+        }
+        std::cout << "The best: " << rdtscMin << std::endl;
+    }
+}
+========== END FILE ==========
+========== FILE: benchmarks/tools/generator/CMakeLists.txt ==========
+TYPE: UTF-8
+# Data generator.
+set (MunkresCppMatrixGenerator_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp)
+include_directories (${PROJECT_SOURCE_DIR}/benchmarks/tools/generator)
+add_executable (matrixgenerator.bin EXCLUDE_FROM_ALL ${MunkresCppMatrixGenerator_SOURCES})
+========== END FILE ==========
+========== FILE: benchmarks/tools/generator/main.cpp ==========
+TYPE: UTF-8
+#include <cstdlib>
+#include "matrixutils.h"
+#include <string>
+
+
+
+int main (int argc, char * argv [])
+{
+    std::vector <Matrix <double> *> matrices;
+
+    for (int i = 1; i < argc; ++i) {
+        const size_t size = std::stoi (argv [i]);
+        Matrix <double> * matrix = new Matrix <double>;
+        * matrix = generate_random_matrix <double> (size, size);
+        matrices.push_back (matrix);
+    }
+    write <double> (matrices);
+
+    return EXIT_SUCCESS;
+}
+========== END FILE ==========
+========== FILE: benchmarks/tools/generator/matrixutils.h ==========
+TYPE: UTF-8
+#if !defined(_MATRIX_UTILS_H_)
+#define _MATRIX_UTILS_H_
+
+#include "matrix.h"
+#include <fstream>
+#include <random>
+#include <limits>
+#include <iostream>
+#include <iomanip>
+
+
+
+const std::string fileName = "matrices.txt";
+
+
+
+template <class T>
+std::ostream & operator << (std::ostream & os, const Matrix <T> & m)
+{
+    const std::string indent ("           ");
+    os << "Matrix (" << & m << ") of " << m.rows () << "x" << m.columns () << std::endl;
+    for (unsigned int row = 0; row < m.rows (); ++row) {
+        os << indent;
+        for (unsigned int col = 0; col < m.columns (); ++col) {
+            os << std::setw (4) << std::setfill (' ') <<  m (row, col) << " ";
+        }
+        os << std::endl;
+    }
+
+    return os;
+}
+
+
+
+template <class T>
+std::istream & operator >> (std::istream & is, Matrix <T> & m)
+{
+    std::string marker;
+    is >> marker;
+    if ("Matrix" == marker) {
+        std::string unused;
+        std::string size;
+        is >> unused;
+        is >> unused;
+        is >> size;
+        const size_t delimiter = size.find ("x");
+        if (std::string::npos != delimiter) {
+            const size_t rows    = stoi (size.substr (0, delimiter) );
+            const size_t columns = stoi (size.substr (delimiter + 1) );
+            if (rows && columns) {
+                m.resize (rows, columns);
+                for (size_t row = 0; row < rows; ++row) {
+                    for (size_t col = 0; col < columns; ++col) {
+                        is >>  m (row, col);
+                    }
+                }
+            }
+        }
+    }
+
+    return is;
+}
+
+
+
+template <typename T>
+bool write (const std::vector <Matrix <T> *> & matrices)
+{
+    std::fstream os;
+    os.open (fileName, std::fstream::out/* | std::fstream::binary*/);
+
+    for (size_t i = 0; i < matrices.size (); ++i) {
+        os << * matrices [i];
+    }
+    os.close ();
+
+    return true;
+}
+
+
+
+template <typename T>
+bool read (std::vector <Matrix <T> *> & matrices)
+{
+    std::fstream is;
+    is.open (fileName, std::fstream::in/* | std::fstream::binary*/);
+
+    Matrix <T> * matrix = new Matrix <T>;
+    while (is >> * matrix) {
+        matrices.push_back (matrix);
+        matrix = new Matrix <T>;
+    }
+    delete matrix;
+    is.close ();
+
+    return true;
+}
+
+
+
+template <typename T>
+Matrix<double> generate_random_matrix (const size_t nrows, const size_t ncols)
+{
+    Matrix<T> matrix(nrows, ncols);
+
+    // Prepare random generator.
+    std::default_random_engine generator;
+    std::uniform_real_distribution<double> distribution (0.0, std::numeric_limits<double>::max () );
+
+    // Initialize matrix with random values.
+    for ( size_t row = 0 ; row < matrix.rows() ; row++ ) {
+        for ( size_t col = 0 ; col < matrix.columns() ; col++ ) {
+            matrix(row,col) = distribution (generator);
+        }
+    }
+
+    return matrix;
+}
+
+#endif /* !defined(_MATRIX_UTILS_H_) */
+========== END FILE ==========
+========== FILE: examples/main.cpp ==========
+TYPE: UTF-8
+/*
+ *   Copyright (c) 2007 John Weaver
+ *
+ *   This program is free software; you can redistribute it and/or modify
+ *   it under the terms of the GNU General Public License as published by
+ *   the Free Software Foundation; either version 2 of the License, or
+ *   (at your option) any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program; if not, write to the Free Software
+ *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
+ */
+
+/*
+ * Some example code.
+ *
+ */
+
+#include <iostream>
+#include <cstdlib>
+#include <ctime>
+
+#include "munkres.h"
+#include "adapters/boostmatrixadapter.h"
+
+int
+main(int argc, char *argv[]) {
+	int nrows = 101;
+	int ncols = 101;
+	
+	if ( argc == 3 ) {
+		nrows = atoi(argv[1]);
+		ncols = atoi(argv[2]);
+	}
+
+	Matrix<double> matrix(nrows, ncols);
+	
+	srandom(time(nullptr)); // Seed random number generator.
+
+	// Initialize matrix with random values.
+	for ( int row = 0 ; row < nrows ; row++ ) {
+		for ( int col = 0 ; col < ncols ; col++ ) {
+			matrix(row,col) = (double)random();
+		}
+	}
+
+	// Display begin matrix state.
+	for ( int row = 0 ; row < nrows ; row++ ) {
+		for ( int col = 0 ; col < ncols ; col++ ) {
+			std::cout.width(2);
+			std::cout << matrix(row,col) << ",";
+		}
+		std::cout << std::endl;
+	}
+	std::cout << std::endl;
+
+	// Apply Munkres algorithm to matrix.
+	Munkres<double> m;
+	m.solve(matrix);
+
+	// Display solved matrix.
+	for ( int row = 0 ; row < nrows ; row++ ) {
+		for ( int col = 0 ; col < ncols ; col++ ) {
+			std::cout.width(2);
+			std::cout << matrix(row,col) << ",";
+		}
+		std::cout << std::endl;
+	}
+
+	std::cout << std::endl;
+
+	
+	for ( int row = 0 ; row < nrows ; row++ ) {
+		int rowcount = 0;
+		for ( int col = 0 ; col < ncols ; col++  ) {
+			if ( matrix(row,col) == 0 )
+				rowcount++;
+		}
+		if ( rowcount != 1 )
+			std::cerr << "Row " << row << " has " << rowcount << " columns that have been matched." << std::endl;
+	}
+
+	for ( int col = 0 ; col < ncols ; col++ ) {
+		int colcount = 0;
+		for ( int row = 0 ; row < nrows ; row++ ) {
+			if ( matrix(row,col) == 0 )
+				colcount++;
+		}
+		if ( colcount != 1 )
+			std::cerr << "Column " << col << " has " << colcount << " rows that have been matched." << std::endl;
+	}
+
+	return 0;
+}
+========== END FILE ==========
+========== FILE: src/adapters/CMakeLists.txt ==========
+TYPE: UTF-8
+set (
+    MunkresAdapters_HEADERS
+    ${PROJECT_SOURCE_DIR}/src/adapters/adapter.h
+    )
+
+set (
+    MunkresCppLib_SOURCES
+    ${MunkresCppLib_SOURCES}
+    ${PROJECT_SOURCE_DIR}/src/adapters/adapter.cpp
+    )
+
+option(STD_ADAPTERS "Build 2D array, std::array and std::vector adapters" OFF)
+if(STD_ADAPTERS)
+    set (MunkresCppLib_HEADERS
+    ${MunkresCppLib_HEADERS}
+    ${PROJECT_SOURCE_DIR}/src/adapters/std2dvectoradapter.h
+    ${PROJECT_SOURCE_DIR}/src/adapters/std2darrayadapter.h
+    )
+
+    set (
+    MunkresCppLib_SOURCES
+    ${MunkresCppLib_SOURCES}
+    ${PROJECT_SOURCE_DIR}/src/adapters/std2dvectordapter.cpp
+    ${PROJECT_SOURCE_DIR}/src/adapters/std2darrayadapter.cpp
+    )
+endif(STD_ADAPTERS)
+
+option(BOOST_MATRIX_ADAPTER "Build boost::numeric::ublas::matrix adapter" OFF)
+if(BOOST_MATRIX_ADAPTER)
+    find_package (Boost REQUIRED)
+    set (MunkresCppLib_HEADERS ${MunkresCppLib_HEADERS}
+    ${PROJECT_SOURCE_DIR}/src/adapters/boostmatrixadapter.h
+    )
+    
+    set (
+    MunkresCppLib_SOURCES
+    ${MunkresCppLib_SOURCES}
+    ${PROJECT_SOURCE_DIR}/src/adapters/boostmatrixadapter.cpp
+    )
+endif(BOOST_MATRIX_ADAPTER)
+
+#propagate upward edited sources
+set(MunkresCppLib_SOURCES ${MunkresCppLib_SOURCES} PARENT_SCOPE)
+
+#install all selected adapters
+install (FILES ${MunkresAdapters_HEADERS}  DESTINATION include/munkres/adapters PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ)
+
+========== END FILE ==========
+========== FILE: src/adapters/adapter.cpp ==========
+TYPE: UTF-8
+/*
+ *   Copyright (c) 2015 Miroslav Krajicek
+ *
+ *   This program is free software; you can redistribute it and/or modify
+ *   it under the terms of the GNU General Public License as published by
+ *   the Free Software Foundation; either version 2 of the License, or
+ *   (at your option) any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program; if not, write to the Free Software
+ *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
+ */
+
+#include "adapter.h"
+========== END FILE ==========
+========== FILE: src/adapters/adapter.h ==========
+TYPE: UTF-8
+/*
+ *   Copyright (c) 2015 Miroslav Krajicek
+ *
+ *   This program is free software; you can redistribute it and/or modify
+ *   it under the terms of the GNU General Public License as published by
+ *   the Free Software Foundation; either version 2 of the License, or
+ *   (at your option) any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program; if not, write to the Free Software
+ *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
+ */
+
+#ifndef _ADAPTER_H_
+#define _ADAPTER_H_
+
+#include "matrix.h"
+#include "munkres.h"
+
+template<typename Data, class Container > class Adapter
+{
+public:
+    virtual Matrix<Data> convertToMatrix(const Container &con) const = 0;
+    virtual void convertFromMatrix(Container &con, const Matrix<Data> &matrix) const = 0;
+    virtual void solve(Container &con)
+    {
+        auto matrix = convertToMatrix(con);
+        m_munkres.solve(matrix);
+        convertFromMatrix(con, matrix);
+    }
+protected:
+    Munkres<Data> m_munkres;
+};
+
+#endif /* _ADAPTER_H_ */
+========== END FILE ==========
+========== FILE: src/adapters/boostmatrixadapter.cpp ==========
+TYPE: UTF-8
+/*
+ *   Copyright (c) 2015 Miroslav Krajicek
+ *
+ *   This program is free software; you can redistribute it and/or modify
+ *   it under the terms of the GNU General Public License as published by
+ *   the Free Software Foundation; either version 2 of the License, or
+ *   (at your option) any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program; if not, write to the Free Software
+ *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
+ */
+
+#include "boostmatrixadapter.h"
+
+template class BoostMatrixAdapter<double>;
+template class BoostMatrixAdapter<float>;
+template class BoostMatrixAdapter<int>;
+========== END FILE ==========
+========== FILE: src/adapters/boostmatrixadapter.h ==========
+TYPE: UTF-8
+/*
+ *   Copyright (c) 2015 Miroslav Krajicek
+ *
+ *   This program is free software; you can redistribute it and/or modify
+ *   it under the terms of the GNU General Public License as published by
+ *   the Free Software Foundation; either version 2 of the License, or
+ *   (at your option) any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program; if not, write to the Free Software
+ *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
+ */
+
+#ifndef _BOOSTMATRIXADAPTER_H_
+#define _BOOSTMATRIXADAPTER_H_
+
+#include "adapter.h"
+#include <boost/numeric/ublas/matrix.hpp>
+
+template<typename Data> class BoostMatrixAdapter : public Adapter<Data,boost::numeric::ublas::matrix<Data> >
+{
+public:
+    virtual Matrix<Data> convertToMatrix(const boost::numeric::ublas::matrix<Data> &boost_matrix) const override
+    {
+        const auto rows = boost_matrix.size1 ();
+          const auto columns = boost_matrix.size2 ();
+          Matrix <Data> matrix (rows, columns);
+          for (int i = 0; i < rows; ++i) {
+            for (int j = 0; j < columns; ++j) {
+              matrix (i, j) = boost_matrix (i, j);
+            }
+          }
+          return matrix;
+    }
+
+    virtual void convertFromMatrix(boost::numeric::ublas::matrix<Data> &boost_matrix,const Matrix<Data> &matrix) const override
+    {
+        const auto rows = matrix.rows();
+          const auto columns = matrix.columns();
+          for (int i = 0; i < rows; ++i) {
+            for (int j = 0; j < columns; ++j) {
+              boost_matrix (i, j) = matrix (i, j);
+            }
+          }
+    }
+};
+
+#endif /* _BOOSTMATRIXADAPTER_H_ */
+========== END FILE ==========
+========== FILE: src/adapters/std2darrayadapter.cpp ==========
+TYPE: UTF-8
+/*
+ *   Copyright (c) 2015 Miroslav Krajicek
+ *
+ *   This program is free software; you can redistribute it and/or modify
+ *   it under the terms of the GNU General Public License as published by
+ *   the Free Software Foundation; either version 2 of the License, or
+ *   (at your option) any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program; if not, write to the Free Software
+ *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
+ */
+
+#include "std2darrayadapter.h"
+========== END FILE ==========
+========== FILE: src/adapters/std2darrayadapter.h ==========
+TYPE: UTF-8
+/*
+ *   Copyright (c) 2015 Miroslav Krajicek
+ *
+ *   This program is free software; you can redistribute it and/or modify
+ *   it under the terms of the GNU General Public License as published by
+ *   the Free Software Foundation; either version 2 of the License, or
+ *   (at your option) any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program; if not, write to the Free Software
+ *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
+ */
+
+#ifndef STD2DARRAYADAPTER_H
+#define STD2DARRAYADAPTER_H
+
+#include "adapter.h"
+
+template<typename Data, size_t rows, size_t columns> class Std2dArrayAdapter : public Adapter<Data, std::array <std::array <Data, columns>, rows>>
+{
+public:
+    virtual Matrix<Data> convertToMatrix(const std::array <std::array <Data, columns>, rows>  &array) const override
+    {
+        Matrix <Data> matrix(rows, columns);
+        for (int i = 0; i < rows; ++i)
+        {
+            for (int j = 0; j < columns; ++j)
+            {
+                matrix (i, j) = array [i][j];
+            }
+        }
+        return matrix;
+    }
+
+    virtual void convertFromMatrix(std::array <std::array <Data, columns>, rows> &array,const Matrix<Data> &matrix) const override
+    {
+        for (int i = 0; i < rows; ++i)
+        {
+            for (int j = 0; j < columns; ++j)
+            {
+                array [i][j] = matrix (i, j);
+            }
+        }
+    }
+};
+
+#endif // STD2DARRAYADAPTER_H
+========== END FILE ==========
+========== FILE: src/adapters/std2dvectordapter.cpp ==========
+TYPE: UTF-8
+/*
+ *   Copyright (c) 2015 Miroslav Krajicek
+ *
+ *   This program is free software; you can redistribute it and/or modify
+ *   it under the terms of the GNU General Public License as published by
+ *   the Free Software Foundation; either version 2 of the License, or
+ *   (at your option) any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program; if not, write to the Free Software
+ *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
+ */
+
+#include "std2dvectordapter.h"
+
+template class Std2dVectorAdapter<double>;
+template class Std2dVectorAdapter<float>;
+template class Std2dVectorAdapter<int>;
+========== END FILE ==========
+========== FILE: src/adapters/std2dvectordapter.h ==========
+TYPE: UTF-8
+/*
+ *   Copyright (c) 2015 Miroslav Krajicek
+ *
+ *   This program is free software; you can redistribute it and/or modify
+ *   it under the terms of the GNU General Public License as published by
+ *   the Free Software Foundation; either version 2 of the License, or
+ *   (at your option) any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program; if not, write to the Free Software
+ *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
+ */
+
+#ifndef RAW2DARRAY_H
+#define RAW2DARRAY_H
+
+#include "adapter.h"
+
+template<typename Data> class Std2dVectorAdapter : public Adapter<Data,std::vector<std::vector <Data>>>
+{
+public:
+    virtual Matrix<Data> convertToMatrix(const std::vector<std::vector <Data>> &vector) const override
+    {
+        const int rows = vector.size();
+        const int cols = vector[0].size();
+        Matrix <Data> matrix (rows, cols);
+        for (int i = 0; i < rows; ++i)
+        {
+            for (int j = 0; j < cols; ++j)
+            {
+                matrix(i, j) = vector[i][j];
+            }
+        }
+        return matrix;
+    }
+
+    virtual void convertFromMatrix(std::vector<std::vector <Data>> &vector,const Matrix<Data> &matrix) const override
+    {
+        vector.clear();
+
+        const int rows = matrix.rows();
+        const int cols = matrix.columns();
+        for (int i = 0; i < rows; ++i)
+        {
+            std::vector <Data> temp;
+            for (int j = 0; j < cols; ++j)
+            {
+                temp.push_back(matrix(i,j));
+            }
+
+            vector.push_back(temp);
+        }
+    }
+};
+
+#endif // RAW2DARRAY_H
+========== END FILE ==========
+========== FILE: src/matrix.cpp ==========
+TYPE: UTF-8
+/*
+ *   Copyright (c) 2007 John Weaver
+ *
+ *   This program is free software; you can redistribute it and/or modify
+ *   it under the terms of the GNU General Public License as published by
+ *   the Free Software Foundation; either version 2 of the License, or
+ *   (at your option) any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program; if not, write to the Free Software
+ *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
+ */
+
+#include "matrix.h"
+
+#include <cassert>
+#include <cstdlib>
+#include <algorithm>
+
+/*export*/ template <class T>
+Matrix<T>::Matrix() {
+  m_rows = 0;
+  m_columns = 0;
+  m_matrix = nullptr;
+}
+
+
+/*export*/ template <class T>
+Matrix<T>::Matrix(const std::initializer_list<std::initializer_list<T>> init) {
+  m_matrix = nullptr;
+  m_rows = init.size();
+  if ( m_rows == 0 ) {
+    m_columns = 0;
+  } else {
+    m_columns = init.begin()->size();
+    if ( m_columns > 0 ) {
+      resize(m_rows, m_columns);
+    }
+  }
+
+  size_t i = 0, j;
+  for ( auto row = init.begin() ; row != init.end() ; ++row, ++i ) {
+    assert ( row->size() == m_columns && "All rows must have the same number of columns." );
+    j = 0;
+    for ( auto value = row->begin() ; value != row->end() ; ++value, ++j ) {
+      m_matrix[i][j] = *value;
+    }
+  }
+}
+
+/*export*/ template <class T>
+Matrix<T>::Matrix(const Matrix<T> &other) {
+  if ( other.m_matrix != nullptr ) {
+    // copy arrays
+    m_matrix = nullptr;
+    resize(other.m_rows, other.m_columns);
+    for ( size_t i = 0 ; i < m_rows ; i++ ) {
+      for ( size_t j = 0 ; j < m_columns ; j++ ) {
+        m_matrix[i][j] = other.m_matrix[i][j];
+      }
+    }
+  } else {
+    m_matrix = nullptr;
+    m_rows = 0;
+    m_columns = 0;
+  }
+}
+
+/*export*/ template <class T>
+Matrix<T>::Matrix(const size_t rows, const size_t columns) {
+  m_matrix = nullptr;
+  resize(rows, columns);
+}
+
+/*export*/ template <class T>
+Matrix<T> &
+Matrix<T>::operator= (const Matrix<T> &other) {
+  if ( other.m_matrix != nullptr ) {
+    // copy arrays
+    resize(other.m_rows, other.m_columns);
+    for ( size_t i = 0 ; i < m_rows ; i++ ) {
+      for ( size_t j = 0 ; j < m_columns ; j++ ) {
+          m_matrix[i][j] = other.m_matrix[i][j];
+      }
+    }
+  } else {
+    // free arrays
+    for ( size_t i = 0 ; i < m_columns ; i++ ) {
+      delete [] m_matrix[i];
+    }
+
+    delete [] m_matrix;
+
+    m_matrix = nullptr;
+    m_rows = 0;
+    m_columns = 0;
+  }
+  
+  return *this;
+}
+
+/*export*/ template <class T>
+Matrix<T>::~Matrix() {
+  if ( m_matrix != nullptr ) {
+    // free arrays
+    for ( size_t i = 0 ; i < m_rows ; i++ ) {
+      delete [] m_matrix[i];
+    }
+
+    delete [] m_matrix;
+  }
+  m_matrix = nullptr;
+}
+
+/*export*/ template <class T>
+void
+Matrix<T>::resize(const size_t rows, const size_t columns, const T default_value) {
+  assert ( rows > 0 && columns > 0 && "Columns and rows must exist." );
+
+  if ( m_matrix == nullptr ) {
+    // alloc arrays
+    m_matrix = new T*[rows]; // rows
+    for ( size_t i = 0 ; i < rows ; i++ ) {
+      m_matrix[i] = new T[columns]; // columns
+    }
+
+    m_rows = rows;
+    m_columns = columns;
+    clear();
+  } else {
+    // save array pointer
+    T **new_matrix;
+    // alloc new arrays
+    new_matrix = new T*[rows]; // rows
+    for ( size_t i = 0 ; i < rows ; i++ ) {
+      new_matrix[i] = new T[columns]; // columns
+      for ( size_t j = 0 ; j < columns ; j++ ) {
+        new_matrix[i][j] = default_value;
+      }
+    }
+
+    // copy data from saved pointer to new arrays
+    size_t minrows = std::min(rows, m_rows);
+    size_t mincols = std::min(columns, m_columns);
+    for ( size_t x = 0 ; x < minrows ; x++ ) {
+      for ( size_t y = 0 ; y < mincols ; y++ ) {
+        new_matrix[x][y] = m_matrix[x][y];
+      }
+    }
+
+    // delete old arrays
+    if ( m_matrix != nullptr ) {
+      for ( size_t i = 0 ; i < m_rows ; i++ ) {
+        delete [] m_matrix[i];
+      }
+
+      delete [] m_matrix;
+    }
+
+    m_matrix = new_matrix;
+  }
+
+  m_rows = rows;
+  m_columns = columns;
+}
+
+/*export*/ template <class T>
+void
+Matrix<T>::clear() {
+  assert( m_matrix != nullptr );
+
+  for ( size_t i = 0 ; i < m_rows ; i++ ) {
+    for ( size_t j = 0 ; j < m_columns ; j++ ) {
+      m_matrix[i][j] = 0;
+    }
+  }
+}
+
+/*export*/ template <class T>
+inline T&
+Matrix<T>::operator ()(const size_t x, const size_t y) {
+  assert ( x < m_rows );
+  assert ( y < m_columns );
+  assert ( m_matrix != nullptr );
+  return m_matrix[x][y];
+}
+
+
+/*export*/ template <class T>
+inline const T&
+Matrix<T>::operator ()(const size_t x, const size_t y) const {
+  assert ( x < m_rows );
+  assert ( y < m_columns );
+  assert ( m_matrix != nullptr );
+  return m_matrix[x][y];
+}
+
+
+/*export*/ template <class T>
+const T
+Matrix<T>::min() const {
+  assert( m_matrix != nullptr );
+  assert ( m_rows > 0 );
+  assert ( m_columns > 0 );
+  T min = m_matrix[0][0];
+
+  for ( size_t i = 0 ; i < m_rows ; i++ ) {
+    for ( size_t j = 0 ; j < m_columns ; j++ ) {
+      min = std::min<T>(min, m_matrix[i][j]);
+    }
+  }
+
+  return min;
+}
+
+
+/*export*/ template <class T>
+const T
+Matrix<T>::max() const {
+  assert( m_matrix != nullptr );
+  assert ( m_rows > 0 );
+  assert ( m_columns > 0 );
+  T max = m_matrix[0][0];
+
+  for ( size_t i = 0 ; i < m_rows ; i++ ) {
+    for ( size_t j = 0 ; j < m_columns ; j++ ) {
+      max = std::max<T>(max, m_matrix[i][j]);
+    }
+  }
+
+  return max;
+}
+========== END FILE ==========
+========== FILE: src/matrix.h ==========
+TYPE: UTF-8
+/*
+ *   Copyright (c) 2007 John Weaver
+ *
+ *   This program is free software; you can redistribute it and/or modify
+ *   it under the terms of the GNU General Public License as published by
+ *   the Free Software Foundation; either version 2 of the License, or
+ *   (at your option) any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program; if not, write to the Free Software
+ *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
+ */
+
+#ifndef _MATRIX_H_
+#define _MATRIX_H_
+
+#include <initializer_list>
+#include <cstdlib>
+#include <ostream>
+
+template <class T>
+class Matrix {
+public:
+  Matrix();
+  Matrix(const size_t rows, const size_t columns);
+  Matrix(const std::initializer_list<std::initializer_list<T>> init);
+  Matrix(const Matrix<T> &other);
+  Matrix<T> & operator= (const Matrix<T> &other);
+  ~Matrix();
+  // all operations modify the matrix in-place.
+  void resize(const size_t rows, const size_t columns, const T default_value = 0);
+  void clear();
+  T& operator () (const size_t x, const size_t y);
+  const T& operator () (const size_t x, const size_t y) const;
+  const T min() const;
+  const T max() const;
+  inline size_t minsize() { return ((m_rows < m_columns) ? m_rows : m_columns); }
+  inline size_t columns() const { return m_columns;}
+  inline size_t rows() const { return m_rows;}
+
+  friend std::ostream& operator<<(std::ostream& os, const Matrix &matrix)
+  {
+      os << "Matrix:" << std::endl;
+      for (size_t row = 0 ; row < matrix.rows() ; row++ )
+      {
+          for (size_t col = 0 ; col < matrix.columns() ; col++ )
+          {
+              os.width(8);
+              os << matrix(row, col) << ",";
+          }
+          os << std::endl;
+      }
+      return os;
+  }
+
+private:
+  T **m_matrix;
+  size_t m_rows;
+  size_t m_columns;
+};
+
+#ifndef USE_EXPORT_KEYWORD
+#include "matrix.cpp"
+//#define export /*export*/
+#endif
+
+#endif /* !defined(_MATRIX_H_) */
+
+========== END FILE ==========
+========== FILE: src/munkres.cpp ==========
+TYPE: UTF-8
+/*
+ *   Copyright (c) 2007 John Weaver
+ *   Copyright (c) 2015 Miroslav Krajicek
+ *
+ *   This program is free software; you can redistribute it and/or modify
+ *   it under the terms of the GNU General Public License as published by
+ *   the Free Software Foundation; either version 2 of the License, or
+ *   (at your option) any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program; if not, write to the Free Software
+ *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
+ */
+
+#include "munkres.h"
+
+template class Munkres<double>;
+template class Munkres<float>;
+template class Munkres<int>;
+
+========== END FILE ==========
+========== FILE: src/munkres.h ==========
+TYPE: UTF-8
+/*
+ *   Copyright (c) 2007 John Weaver
+ *   Copyright (c) 2015 Miroslav Krajicek
+ *
+ *   This program is free software; you can redistribute it and/or modify
+ *   it under the terms of the GNU General Public License as published by
+ *   the Free Software Foundation; either version 2 of the License, or
+ *   (at your option) any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program; if not, write to the Free Software
+ *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
+ */
+
+#if !defined(_MUNKRES_H_)
+#define _MUNKRES_H_
+
+#include "matrix.h"
+
+#include <list>
+#include <utility>
+#include <iostream>
+#include <cmath>
+#include <limits>
+
+template<typename Data> class Munkres
+{
+    static constexpr int NORMAL = 0;
+    static constexpr int STAR   = 1;
+    static constexpr int PRIME  = 2;
+public:
+
+    /*
+     *
+     * Linear assignment problem solution
+     * [modifies matrix in-place.]
+     * matrix(row,col): row major format assumed.
+     *
+     * Assignments are remaining 0 values
+     * (extra 0 values are replaced with -1)
+     *
+     */
+    void solve(Matrix<Data> &m) {
+        const size_t rows = m.rows(),
+                columns = m.columns(),
+                size = std::max(rows, columns);
+
+#ifdef DEBUG
+        std::cout << "Munkres input: " << m << std::endl;
+#endif
+
+        // Copy input matrix
+        this->matrix = m;
+
+        if ( rows != columns ) {
+            // If the input matrix isn't square, make it square
+            // and fill the empty values with the largest value present
+            // in the matrix.
+            matrix.resize(size, size, matrix.max());
+        }
+
+
+        // STAR == 1 == starred, PRIME == 2 == primed
+        mask_matrix.resize(size, size);
+
+        row_mask = new bool[size];
+        col_mask = new bool[size];
+        for ( size_t i = 0 ; i < size ; i++ ) {
+            row_mask[i] = false;
+        }
+
+        for ( size_t i = 0 ; i < size ; i++ ) {
+            col_mask[i] = false;
+        }
+
+        // Prepare the matrix values...
+
+        // If there were any infinities, replace them with a value greater
+        // than the maximum value in the matrix.
+        replace_infinites(matrix);
+
+        minimize_along_direction(matrix, rows >= columns);
+        minimize_along_direction(matrix, rows <  columns);
+
+        // Follow the steps
+        int step = 1;
+        while ( step ) {
+            switch ( step ) {
+            case 1:
+                step = step1();
+                // step is always 2
+                break;
+            case 2:
+                step = step2();
+                // step is always either 0 or 3
+                break;
+            case 3:
+                step = step3();
+                // step in [3, 4, 5]
+                break;
+            case 4:
+                step = step4();
+                // step is always 2
+                break;
+            case 5:
+                step = step5();
+                // step is always 3
+                break;
+            }
+        }
+
+        // Store results
+        for ( size_t row = 0 ; row < size ; row++ ) {
+            for ( size_t col = 0 ; col < size ; col++ ) {
+                if ( mask_matrix(row, col) == STAR ) {
+                    matrix(row, col) = 0;
+                } else {
+                    matrix(row, col) = -1;
+                }
+            }
+        }
+
+#ifdef DEBUG
+        std::cout << "Munkres output: " << matrix << std::endl;
+#endif
+        // Remove the excess rows or columns that we added to fit the
+        // input to a square matrix.
+        matrix.resize(rows, columns);
+
+        m = matrix;
+
+        delete [] row_mask;
+        delete [] col_mask;
+    }
+
+    static void replace_infinites(Matrix<Data> &matrix) {
+      const size_t rows = matrix.rows(),
+                columns = matrix.columns();
+      assert( rows > 0 && columns > 0 );
+      double max = matrix(0, 0);
+      constexpr auto infinity = std::numeric_limits<double>::infinity();
+
+      // Find the greatest value in the matrix that isn't infinity.
+      for ( size_t row = 0 ; row < rows ; row++ ) {
+        for ( size_t col = 0 ; col < columns ; col++ ) {
+          if ( matrix(row, col) != infinity ) {
+            if ( max == infinity ) {
+              max = matrix(row, col);
+            } else {
+              max = std::max<double>(max, matrix(row, col));
+            }
+          }
+        }
+      }
+
+      // a value higher than the maximum value present in the matrix.
+      if ( max == infinity ) {
+        // This case only occurs when all values are infinite.
+        max = 0;
+      } else {
+        max++;
+      }
+
+      for ( size_t row = 0 ; row < rows ; row++ ) {
+        for ( size_t col = 0 ; col < columns ; col++ ) {
+          if ( matrix(row, col) == infinity ) {
+            matrix(row, col) = max;
+          }
+        }
+      }
+
+    }
+
+    static void minimize_along_direction(Matrix<Data> &matrix, const bool over_columns) {
+      const size_t outer_size = over_columns ? matrix.columns() : matrix.rows(),
+                   inner_size = over_columns ? matrix.rows() : matrix.columns();
+
+      // Look for a minimum value to subtract from all values along
+      // the "outer" direction.
+      for ( size_t i = 0 ; i < outer_size ; i++ ) {
+        double min = over_columns ? matrix(0, i) : matrix(i, 0);
+
+        // As long as the current minimum is greater than zero,
+        // keep looking for the minimum.
+        // Start at one because we already have the 0th value in min.
+        for ( size_t j = 1 ; j < inner_size && min > 0 ; j++ ) {
+          min = std::min<double>(
+            min,
+            over_columns ? matrix(j, i) : matrix(i, j));
+        }
+
+        if ( min > 0 ) {
+          for ( size_t j = 0 ; j < inner_size ; j++ ) {
+            if ( over_columns ) {
+              matrix(j, i) -= min;
+            } else {
+              matrix(i, j) -= min;
+            }
+          }
+        }
+      }
+    }
+
+private:
+
+  inline bool find_uncovered_in_matrix(const double item, size_t &row, size_t &col) const {
+    const size_t rows = matrix.rows(),
+              columns = matrix.columns();
+
+    for ( row = 0 ; row < rows ; row++ ) {
+      if ( !row_mask[row] ) {
+        for ( col = 0 ; col < columns ; col++ ) {
+          if ( !col_mask[col] ) {
+            if ( matrix(row,col) == item ) {
+              return true;
+            }
+          }
+        }
+      }
+    }
+
+    return false;
+  }
+
+  bool pair_in_list(const std::pair<size_t,size_t> &needle, const std::list<std::pair<size_t,size_t> > &haystack) {
+    for ( std::list<std::pair<size_t,size_t> >::const_iterator i = haystack.begin() ; i != haystack.end() ; i++ ) {
+      if ( needle == *i ) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  int step1() {
+    const size_t rows = matrix.rows(),
+              columns = matrix.columns();
+
+    for ( size_t row = 0 ; row < rows ; row++ ) {
+      for ( size_t col = 0 ; col < columns ; col++ ) {
+        if ( 0 == matrix(row, col) ) {
+          for ( size_t nrow = 0 ; nrow < row ; nrow++ )
+            if ( STAR == mask_matrix(nrow,col) )
+              goto next_column;
+
+          mask_matrix(row,col) = STAR;
+          goto next_row;
+        }
+        next_column:;
+      }
+      next_row:;
+    }
+
+    return 2;
+  }
+
+  int step2() {
+    const size_t rows = matrix.rows(),
+              columns = matrix.columns();
+    size_t covercount = 0;
+
+    for ( size_t row = 0 ; row < rows ; row++ )
+      for ( size_t col = 0 ; col < columns ; col++ )
+        if ( STAR == mask_matrix(row, col) ) {
+          col_mask[col] = true;
+          covercount++;
+        }
+
+    if ( covercount >= matrix.minsize() ) {
+  #ifdef DEBUG
+      std::cout << "Final cover count: " << covercount << std::endl;
+  #endif
+      return 0;
+    }
+
+  #ifdef DEBUG
+    std::cout << "Munkres matrix has " << covercount << " of " << matrix.minsize() << " Columns covered:" << std::endl;
+    std::cout << matrix << std::endl;
+  #endif
+
+
+    return 3;
+  }
+
+  int step3() {
+    /*
+    Main Zero Search
+
+     1. Find an uncovered Z in the distance matrix and prime it. If no such zero exists, go to Step 5
+     2. If No Z* exists in the row of the Z', go to Step 4.
+     3. If a Z* exists, cover this row and uncover the column of the Z*. Return to Step 3.1 to find a new Z
+    */
+    if ( find_uncovered_in_matrix(0, saverow, savecol) ) {
+      mask_matrix(saverow,savecol) = PRIME; // prime it.
+    } else {
+      return 5;
+    }
+
+    for ( size_t ncol = 0 ; ncol < matrix.columns() ; ncol++ ) {
+      if ( mask_matrix(saverow,ncol) == STAR ) {
+        row_mask[saverow] = true; //cover this row and
+        col_mask[ncol] = false; // uncover the column containing the starred zero
+        return 3; // repeat
+      }
+    }
+
+    return 4; // no starred zero in the row containing this primed zero
+  }
+
+  int step4() {
+    const size_t rows = matrix.rows(),
+              columns = matrix.columns();
+
+    // seq contains pairs of row/column values where we have found
+    // either a star or a prime that is part of the ``alternating sequence``.
+    std::list<std::pair<size_t,size_t> > seq;
+    // use saverow, savecol from step 3.
+    std::pair<size_t,size_t> z0(saverow, savecol);
+    seq.insert(seq.end(), z0);
+
+    // We have to find these two pairs:
+    std::pair<size_t,size_t> z1(-1, -1);
+    std::pair<size_t,size_t> z2n(-1, -1);
+
+    size_t row, col = savecol;
+    /*
+    Increment Set of Starred Zeros
+
+     1. Construct the ``alternating sequence'' of primed and starred zeros:
+
+           Z0 : Unpaired Z' from Step 4.2
+           Z1 : The Z* in the column of Z0
+           Z[2N] : The Z' in the row of Z[2N-1], if such a zero exists
+           Z[2N+1] : The Z* in the column of Z[2N]
+
+        The sequence eventually terminates with an unpaired Z' = Z[2N] for some N.
+    */
+    bool madepair;
+    do {
+      madepair = false;
+      for ( row = 0 ; row < rows ; row++ ) {
+        if ( mask_matrix(row,col) == STAR ) {
+          z1.first = row;
+          z1.second = col;
+          if ( pair_in_list(z1, seq) ) {
+            continue;
+          }
+
+          madepair = true;
+          seq.insert(seq.end(), z1);
+          break;
+        }
+      }
+
+      if ( !madepair )
+        break;
+
+      madepair = false;
+
+      for ( col = 0 ; col < columns ; col++ ) {
+        if ( mask_matrix(row, col) == PRIME ) {
+          z2n.first = row;
+          z2n.second = col;
+          if ( pair_in_list(z2n, seq) ) {
+            continue;
+          }
+          madepair = true;
+          seq.insert(seq.end(), z2n);
+          break;
+        }
+      }
+    } while ( madepair );
+
+    for ( std::list<std::pair<size_t,size_t> >::iterator i = seq.begin() ;
+        i != seq.end() ;
+        i++ ) {
+      // 2. Unstar each starred zero of the sequence.
+      if ( mask_matrix(i->first,i->second) == STAR )
+        mask_matrix(i->first,i->second) = NORMAL;
+
+      // 3. Star each primed zero of the sequence,
+      // thus increasing the number of starred zeros by one.
+      if ( mask_matrix(i->first,i->second) == PRIME )
+        mask_matrix(i->first,i->second) = STAR;
+    }
+
+    // 4. Erase all primes, uncover all columns and rows,
+    for ( size_t row = 0 ; row < mask_matrix.rows() ; row++ ) {
+      for ( size_t col = 0 ; col < mask_matrix.columns() ; col++ ) {
+        if ( mask_matrix(row,col) == PRIME ) {
+          mask_matrix(row,col) = NORMAL;
+        }
+      }
+    }
+
+    for ( size_t i = 0 ; i < rows ; i++ ) {
+      row_mask[i] = false;
+    }
+
+    for ( size_t i = 0 ; i < columns ; i++ ) {
+      col_mask[i] = false;
+    }
+
+    // and return to Step 2.
+    return 2;
+  }
+
+  int step5() {
+    const size_t rows = matrix.rows(),
+              columns = matrix.columns();
+    /*
+    New Zero Manufactures
+
+     1. Let h be the smallest uncovered entry in the (modified) distance matrix.
+     2. Add h to all covered rows.
+     3. Subtract h from all uncovered columns
+     4. Return to Step 3, without altering stars, primes, or covers.
+    */
+    double h = std::numeric_limits<double>::max();
+    for ( size_t row = 0 ; row < rows ; row++ ) {
+      if ( !row_mask[row] ) {
+        for ( size_t col = 0 ; col < columns ; col++ ) {
+          if ( !col_mask[col] ) {
+            if ( h > matrix(row, col) && matrix(row, col) != 0 ) {
+              h = matrix(row, col);
+            }
+          }
+        }
+      }
+    }
+
+    for ( size_t row = 0 ; row < rows ; row++ ) {
+      if ( row_mask[row] ) {
+        for ( size_t col = 0 ; col < columns ; col++ ) {
+          matrix(row, col) += h;
+        }
+      }
+    }
+
+    for ( size_t col = 0 ; col < columns ; col++ ) {
+      if ( !col_mask[col] ) {
+        for ( size_t row = 0 ; row < rows ; row++ ) {
+          matrix(row, col) -= h;
+        }
+      }
+    }
+
+    return 3;
+  }
+
+  Matrix<int> mask_matrix;
+  Matrix<Data> matrix;
+  bool *row_mask;
+  bool *col_mask;
+  size_t saverow = 0, savecol = 0;
+};
+
+
+#endif /* !defined(_MUNKRES_H_) */
+========== END FILE ==========
+========== FILE: tests/CMakeLists.txt ==========
+TYPE: UTF-8
+find_package (Boost     COMPONENTS      system      REQUIRED)
+
+enable_testing ()
+
+# Framework for writing tests.
+ExternalProject_Add (
+    googletest
+    GIT_REPOSITORY "https://github.com/google/googletest.git"
+    UPDATE_COMMAND cd ${PROJECT_BINARY_DIR}/googletest && mv googletest gtest && mv gtest/googletest .
+    CMAKE_ARGS "-DCMAKE_BUILD_TYPE=Release"
+    SOURCE_DIR "${PROJECT_BINARY_DIR}/googletest/googletest"
+    BINARY_DIR "${PROJECT_BINARY_DIR}/googletest/googletest"
+    INSTALL_COMMAND ""
+    TEST_COMMAND ""
+)
+set_target_properties (googletest PROPERTIES EXCLUDE_FROM_ALL TRUE)
+set (GTEST_ROOT "${PROJECT_BINARY_DIR}/googletest/googletest")
+set (GTEST_FOUND true)
+set (GTEST_INCLUDE_DIRS "${PROJECT_BINARY_DIR}/googletest/googletest/include")
+set (GTEST_LIBRARIES "${PROJECT_BINARY_DIR}/googletest/googletest/libgtest.a")
+set (GTEST_MAIN_LIBRARIES "${PROJECT_BINARY_DIR}/googletest/googletest/libgtest_main.a")
+set (GTEST_BOTH_LIBRARIES ${GTEST_LIBRARIES} ${GTEST_MAIN_LIBRARIES})
+
+include_directories (${GTEST_INCLUDE_DIRS})
+
+# Special flags fo generating code coverage.
+set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fprofile-arcs -ftest-coverage")
+set (CMAKE_SHARED_LINKER_FLAGS "-fprofile-arcs -ftest-coverage")
+
+# Special warning options for more attentive checking.
+set (SPECIAL_CXX_WARNING_FLAGS "${SPECIAL_CXX_WARNING_FLAGS} -Wmissing-include-dirs -Wundef -Wfloat-equal -Wunsafe-loop-optimizations")
+set (SPECIAL_CXX_WARNING_FLAGS "${SPECIAL_CXX_WARNING_FLAGS} -Wdouble-promotion -Winit-self -Wvector-operation-performance -Wnoexcept -Weffc++ -Wstrict-null-sentinel")
+set (SPECIAL_CXX_WARNING_FLAGS "${SPECIAL_CXX_WARNING_FLAGS} -Woverloaded-virtual -Wsign-promo")
+set (SPECIAL_CXX_WARNING_FLAGS "${SPECIAL_CXX_WARNING_FLAGS} -Wvla -Winvalid-pch -Winline -Wredundant-decls")
+set (SPECIAL_CXX_WARNING_FLAGS "${SPECIAL_CXX_WARNING_FLAGS} -Wlogical-op -Wcast-align")
+set (SPECIAL_CXX_WARNING_FLAGS "${SPECIAL_CXX_WARNING_FLAGS} -Wcast-qual -Wpointer-arith -Wtrampolines")
+set (SPECIAL_CXX_WARNING_FLAGS "${SPECIAL_CXX_WARNING_FLAGS} -Wold-style-cast")
+
+set_source_files_properties (
+    ${MunkresCppLib_SOURCES}
+    PROPERTIES COMPILE_FLAGS ${SPECIAL_CXX_WARNING_FLAGS}
+)
+
+
+# Test suites.
+set (
+    MunkresCppTest_SOURCES
+    ${PROJECT_SOURCE_DIR}/tests/munkrestest.cpp
+    ${PROJECT_SOURCE_DIR}/tests/matrixtest.cpp
+    ${PROJECT_SOURCE_DIR}/tests/adapters/std_2d_arraytest.cpp
+    ${PROJECT_SOURCE_DIR}/tests/adapters/std_2d_vectortest.cpp
+    ${PROJECT_SOURCE_DIR}/tests/adapters/boost_matrixtest.cpp
+)
+add_executable (munkrestest EXCLUDE_FROM_ALL ${MunkresCppLib_SOURCES} ${MunkresCppTest_SOURCES})
+target_link_libraries (munkrestest ${GTEST_BOTH_LIBRARIES} gcov pthread)
+add_custom_target (tests)
+add_dependencies  (tests munkrestest)
+add_dependencies  (munkrestest googletest)
+add_test (MunkresCppTest muknrestest)
+
+
+# Test coverage report.
+set (Coverage_REPORT ${PROJECT_BINARY_DIR}/coverage.info)
+set (Coverage_DIR    ${PROJECT_BINARY_DIR}/coverage)
+add_custom_command (
+    OUTPUT  ${Coverage_REPORT}
+    COMMAND lcov -q -c -f -b . -d ${PROJECT_BINARY_DIR}/tests -o ${Coverage_REPORT}
+    COMMAND lcov -e ${Coverage_REPORT} '${PROJECT_SOURCE_DIR}/src/*' -o ${Coverage_REPORT}
+    COMMAND genhtml ${Coverage_REPORT} --legend --demangle-cpp -f -q -o ${Coverage_DIR}
+    DEPENDS munkrestest
+)
+add_custom_target (coverage DEPENDS ${Coverage_REPORT})
+
+
+# Adding test coverage artifacts to the "make clean" rule.
+macro (determine_coverage_data Sources TestName Artifacts Suffix)
+set (CoverageDirectory "${CMAKE_CURRENT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/${TestName}.dir")
+foreach (File ${Sources})
+    string (REGEX MATCH "^${CMAKE_CURRENT_SOURCE_DIR}*" Directory "${File}")
+    if    (Directory STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+        string (REGEX REPLACE "^${CMAKE_CURRENT_SOURCE_DIR}*" "${CoverageDirectory}" File "${File}")
+    else  (Directory STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+        string (REGEX REPLACE "/" ";" A "${CMAKE_CURRENT_SOURCE_DIR}")
+        string (REGEX REPLACE "/" ";" B "${File}")
+        list (LENGTH A DeepDirectory)
+        list (LENGTH B DeepFile)
+        set (File "${CoverageDirectory}")
+        set (I 1)
+        while    (I less DeepDirectory)
+            list (GET A ${I} AI)
+            list (GET B ${I} BI)
+            if    (AI STREQUAL BI)
+                math (EXPR I "${I} + 1")
+            else  (AI STREQUAL BI)
+                math (EXPR DeepDiff "${DeepFile} - ${I} - 1")
+                while    (DeepDiff GREATER 0)
+                    set (File "${File}/__")
+                    math (EXPR DeepDiff "${DeepDiff} - 1")
+                endwhile (DeepDiff GREATER 0)
+                while    (I less DeepFile)
+                    list (GET B ${I} BI)
+                    set (File "${File}/${BI}")
+                    math (EXPR I "${I} + 1")
+                endwhile (I less DeepFile)
+            endif (AI STREQUAL BI)
+        endwhile (I less DeepDirectory)
+    endif (Directory STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+    set (${Artifacts} ${${Artifacts}} "${File}${Suffix}")
+endforeach (File)
+endmacro (determine_coverage_data)
+
+determine_coverage_data ("${MunkresCppTest_SOURCES};${MunkresCppLib_SOURCES}" munkrestest Coverage_GCNO ".gcno")
+determine_coverage_data ("${MunkresCppTest_SOURCES};${MunkresCppLib_SOURCES}" munkrestest Coverage_GCDA ".gcda")
+
+list (APPEND Coverage_DATA "${Coverage_REPORT}")
+list (APPEND Coverage_DATA "${Coverage_DIR}")
+list (APPEND Coverage_DATA "${Coverage_GCNO}")
+list (APPEND Coverage_DATA "${Coverage_GCDA}")
+set_directory_properties (PROPERTIES ADDITIONAL_MAKE_CLEAN_FILES "${Coverage_DATA}")
+========== END FILE ==========
+========== FILE: tests/adapters/boost_matrixtest.cpp ==========
+TYPE: UTF-8
+#include <gtest/gtest.h>
+#include "adapters/boostmatrixadapter.h"
+#include <iostream>
+#include <iomanip>
+
+
+
+class Adapters_boost_matrix_Test : public ::testing::Test
+{
+};
+
+
+
+TEST_F (Adapters_boost_matrix_Test, convert_boost_matrix_to_munkres_matrix_Success)
+{
+  // Arrange.
+  constexpr unsigned int dimension {3};
+  boost::numeric::ublas::matrix <double> test_boost_matrix (dimension, dimension);
+  //  {1, 2, 3},
+  //  {4, 5, 6},
+  //  {7, 8, 9}
+  test_boost_matrix (0, 0) = 1; test_boost_matrix (0, 1) = 2; test_boost_matrix (0, 2) = 3;
+  test_boost_matrix (1, 0) = 4; test_boost_matrix (1, 1) = 5; test_boost_matrix (1, 2) = 6;
+  test_boost_matrix (2, 0) = 7; test_boost_matrix (2, 1) = 8; test_boost_matrix (2, 2) = 9;
+  const Matrix <double> etalon_matrix {
+    {1, 2, 3},
+    {4, 5, 6},
+    {7, 8, 9}
+  };
+
+  BoostMatrixAdapter<double> adapter;
+
+  // Act.
+  const auto test_matrix = adapter.convertToMatrix(test_boost_matrix);
+
+  // Assert.
+  for (unsigned int row = 0; row < dimension; ++row) {
+    for (unsigned int col = 0; col < dimension; ++col) {
+      EXPECT_EQ (etalon_matrix (row, col), test_matrix (row, col) );
+    }
+  }
+}
+
+TEST_F (Adapters_boost_matrix_Test, convert_non_square_boost_matrix_to_munkres_matrix_Success)
+{
+  // Arrange.
+  constexpr unsigned int dimension1 {2};
+  constexpr unsigned int dimension2 {3};
+  boost::numeric::ublas::matrix <double> test_boost_matrix (dimension1, dimension2);
+  //  {1, 2, 3},
+  //  {4, 5, 6}
+  test_boost_matrix (0, 0) = 1; test_boost_matrix (0, 1) = 2; test_boost_matrix (0, 2) = 3;
+  test_boost_matrix (1, 0) = 4; test_boost_matrix (1, 1) = 5; test_boost_matrix (1, 2) = 6;
+  const Matrix <double> etalon_matrix {
+    {1, 2, 3},
+    {4, 5, 6}
+  };
+
+  BoostMatrixAdapter<double> adapter;
+
+  // Act.
+  const auto test_matrix = adapter.convertToMatrix(test_boost_matrix);
+
+  // Assert.
+  for (unsigned int row = 0; row < dimension1; ++row) {
+    for (unsigned int col = 0; col < dimension2; ++col) {
+      EXPECT_EQ (etalon_matrix (row, col), test_matrix (row, col) );
+    }
+  }
+}
+
+TEST_F (Adapters_boost_matrix_Test, fill_boost_matrix_from_munkres_matrix_Success)
+{
+  // Arrange.
+  constexpr unsigned int dimension {3};
+  boost::numeric::ublas::matrix <double> test_boost_matrix (dimension, dimension);
+  //  {0, 0, 0},
+  //  {0, 0, 0},
+  //  {0, 0, 0}
+  test_boost_matrix (0, 0) = 0; test_boost_matrix (0, 1) = 0; test_boost_matrix (0, 2) = 0;
+  test_boost_matrix (1, 0) = 0; test_boost_matrix (1, 1) = 0; test_boost_matrix (1, 2) = 0;
+  test_boost_matrix (2, 0) = 0; test_boost_matrix (2, 1) = 0; test_boost_matrix (2, 2) = 0;
+
+  boost::numeric::ublas::matrix <double> etalon_boost_matrix (dimension, dimension);
+  //  {1, 2, 3},
+  //  {4, 5, 6},
+  //  {7, 8, 9}
+  etalon_boost_matrix (0, 0) = 1; etalon_boost_matrix (0, 1) = 2; etalon_boost_matrix (0, 2) = 3;
+  etalon_boost_matrix (1, 0) = 4; etalon_boost_matrix (1, 1) = 5; etalon_boost_matrix (1, 2) = 6;
+  etalon_boost_matrix (2, 0) = 7; etalon_boost_matrix (2, 1) = 8; etalon_boost_matrix (2, 2) = 9;
+
+  const Matrix <double> etalon_matrix {
+    {1, 2, 3},
+    {4, 5, 6},
+    {7, 8, 9}
+  };
+
+  BoostMatrixAdapter<double> adapter;
+
+  // Act.
+  adapter.convertFromMatrix(test_boost_matrix, etalon_matrix);
+
+  // Assert.
+  for (unsigned int row = 0; row < dimension; ++row) {
+    for (unsigned int col = 0; col < dimension; ++col) {
+      EXPECT_EQ (etalon_boost_matrix (row, col), test_boost_matrix (row, col) );
+    }
+  }
+}
+
+TEST_F (Adapters_boost_matrix_Test, fill_non_square_boost_matrix_from_munkres_matrix_Success)
+{
+  // Arrange.
+    constexpr unsigned int dimension1 {2};
+    constexpr unsigned int dimension2 {3};
+  boost::numeric::ublas::matrix <double> test_boost_matrix (dimension1, dimension2);
+  //  {0, 0, 0},
+  //  {0, 0, 0}
+  test_boost_matrix (0, 0) = 0; test_boost_matrix (0, 1) = 0; test_boost_matrix (0, 2) = 0;
+  test_boost_matrix (1, 0) = 0; test_boost_matrix (1, 1) = 0; test_boost_matrix (1, 2) = 0;
+
+  boost::numeric::ublas::matrix <double> etalon_boost_matrix (dimension1, dimension2);
+  //  {1, 2, 3},
+  //  {4, 5, 6}
+  etalon_boost_matrix (0, 0) = 1; etalon_boost_matrix (0, 1) = 2; etalon_boost_matrix (0, 2) = 3;
+  etalon_boost_matrix (1, 0) = 4; etalon_boost_matrix (1, 1) = 5; etalon_boost_matrix (1, 2) = 6;
+
+  const Matrix <double> etalon_matrix {
+    {1, 2, 3},
+    {4, 5, 6}
+  };
+
+  BoostMatrixAdapter<double> adapter;
+
+  // Act.
+  adapter.convertFromMatrix(test_boost_matrix, etalon_matrix);
+
+  // Assert.
+  for (unsigned int row = 0; row < dimension1; ++row) {
+    for (unsigned int col = 0; col < dimension2; ++col) {
+      EXPECT_EQ (etalon_boost_matrix (row, col), test_boost_matrix (row, col) );
+    }
+  }
+}
+
+TEST_F (Adapters_boost_matrix_Test, solve_boost_matrix_Success)
+{
+  // Arrange.
+  constexpr unsigned int dimension {3};
+  boost::numeric::ublas::matrix <double> etalon_boost_matrix (dimension, dimension);
+  //  {-1.0,  0.0, -1.0},
+  //  { 0.0, -1.0, -1.0},
+  //  {-1.0, -1.0,  0.0}
+  etalon_boost_matrix (0, 0) = -1.0; etalon_boost_matrix (0, 1) =  0.0; etalon_boost_matrix (0, 2) = -1.0;
+  etalon_boost_matrix (1, 0) =  0.0; etalon_boost_matrix (1, 1) = -1.0; etalon_boost_matrix (1, 2) = -1.0;
+  etalon_boost_matrix (2, 0) = -1.0; etalon_boost_matrix (2, 1) = -1.0; etalon_boost_matrix (2, 2) =  0.0;
+
+  boost::numeric::ublas::matrix <double> test_boost_matrix (dimension, dimension);
+  //  {1.0,  0.0,  1.0},
+  //  {0.0,  1.0,  1.0},
+  //  {1.0,  1.0,  0.0}
+  test_boost_matrix (0, 0) = 1.0; test_boost_matrix (0, 1) = 0.0; test_boost_matrix (0, 2) = 1.0;
+  test_boost_matrix (1, 0) = 0.0; test_boost_matrix (1, 1) = 1.0; test_boost_matrix (1, 2) = 1.0;
+  test_boost_matrix (2, 0) = 1.0; test_boost_matrix (2, 1) = 1.0; test_boost_matrix (2, 2) = 0.0;
+
+  BoostMatrixAdapter<double> adapter;
+
+  // Act.
+  adapter.solve(test_boost_matrix);
+
+  // Assert.
+  for (unsigned int row = 0; row < dimension; ++row) {
+    for (unsigned int col = 0; col < dimension; ++col) {
+      EXPECT_EQ (etalon_boost_matrix (row, col), test_boost_matrix (row, col) );
+    }
+  }
+}
+========== END FILE ==========
+========== FILE: tests/adapters/std_2d_arraytest.cpp ==========
+TYPE: UTF-8
+#include <gtest/gtest.h>
+#include "adapters/std2darrayadapter.h"
+#include <iostream>
+#include <iomanip>
+
+
+
+class Adapters_std_2d_array_Test : public ::testing::Test
+{
+};
+
+
+
+TEST_F (Adapters_std_2d_array_Test, convert_std_2d_array_to_munkres_matrix_Success)
+{
+  // Arrange.
+  constexpr unsigned int dimension {3};
+  const std::array <std::array <double, dimension>, dimension> test_array {{
+    {1, 2, 3},
+    {4, 5, 6},
+    {7, 8, 9}
+  }};
+  const Matrix <double> etalon_matrix {
+    {1, 2, 3},
+    {4, 5, 6},
+    {7, 8, 9}
+  };
+
+  Std2dArrayAdapter<double,test_array.size(),test_array.size()> adapter;
+
+  // Act.
+  const auto test_matrix = adapter.convertToMatrix(test_array);
+
+  // Assert.
+  for (unsigned int row = 0; row < dimension; ++row) {
+    for (unsigned int col = 0; col < dimension; ++col) {
+      EXPECT_EQ (etalon_matrix (row, col), test_matrix (row, col) );
+    }
+  }
+}
+
+TEST_F (Adapters_std_2d_array_Test, convert_non_square_std_2d_array_to_munkres_matrix_Success)
+{
+  // Arrange.
+  constexpr unsigned int dimension1 {2};
+  constexpr unsigned int dimension2 {3};
+  const std::array <std::array <double, dimension2>, dimension1> test_array {{
+    {1, 2, 3},
+    {4, 5, 6}
+  }};
+  const Matrix <double> etalon_matrix {
+    {1, 2, 3},
+    {4, 5, 6}
+  };
+
+  Std2dArrayAdapter<double,test_array.size(),test_array[0].size()> adapter;
+
+  // Act.
+  const auto test_matrix = adapter.convertToMatrix(test_array);
+
+  // Assert.
+  for (unsigned int row = 0; row < dimension1; ++row) {
+    for (unsigned int col = 0; col < dimension2; ++col) {
+      EXPECT_EQ (etalon_matrix (row, col), test_matrix (row, col) );
+    }
+  }
+}
+
+TEST_F (Adapters_std_2d_array_Test, fill_std_2d_array_from_munkres_matrix_Success)
+{
+  // Arrange.
+  constexpr unsigned int dimension {3};
+  std::array <std::array <double, dimension>, dimension> test_array {{
+    {0, 0, 0},
+    {0, 0, 0},
+    {0, 0, 0}
+  }};
+  const std::array <std::array <double, dimension>, dimension> etalon_array {{
+    {1, 2, 3},
+    {4, 5, 6},
+    {7, 8, 9}
+  }};
+  const Matrix <double> etalon_matrix {
+    {1, 2, 3},
+    {4, 5, 6},
+    {7, 8, 9}
+  };
+
+  Std2dArrayAdapter<double,test_array.size(),test_array.size()> adapter;
+
+  // Act.
+  adapter.convertFromMatrix(test_array, etalon_matrix);
+
+  // Assert.
+  for (unsigned int row = 0; row < dimension; ++row) {
+    for (unsigned int col = 0; col < dimension; ++col) {
+      EXPECT_EQ (etalon_array [row][col], test_array [row][col]);
+    }
+  }
+}
+
+TEST_F (Adapters_std_2d_array_Test, fill_non_square_std_2d_array_from_munkres_matrix_Success)
+{
+  // Arrange.
+    constexpr unsigned int dimension1 {2};
+    constexpr unsigned int dimension2 {3};
+  std::array <std::array <double, dimension2>, dimension1> test_array {{
+    {0, 0, 0},
+    {0, 0, 0}
+  }};
+  const std::array <std::array <double, dimension2>, dimension1> etalon_array {{
+    {1, 2, 3},
+    {4, 5, 6}
+  }};
+  const Matrix <double> etalon_matrix {
+    {1, 2, 3},
+    {4, 5, 6}
+  };
+
+  Std2dArrayAdapter<double,test_array.size(),dimension2> adapter;
+
+  // Act.
+  adapter.convertFromMatrix(test_array, etalon_matrix);
+
+  // Assert.
+  for (unsigned int row = 0; row < dimension1; ++row) {
+    for (unsigned int col = 0; col < dimension2; ++col) {
+      EXPECT_EQ (etalon_array [row][col], test_array [row][col]);
+    }
+  }
+}
+
+TEST_F (Adapters_std_2d_array_Test, solve_std_2d_array_Success)
+{
+  // Arrange.
+  constexpr unsigned int dimension {3};
+  std::array <std::array <double, dimension>, dimension> etalon_array{{
+    {-1.0,  0.0, -1.0},
+    { 0.0, -1.0, -1.0},
+    {-1.0, -1.0,  0.0}
+  }};
+  std::array <std::array <double, dimension>, dimension> test_array{{
+    {1.0,  0.0,  1.0},
+    {0.0,  1.0,  1.0},
+    {1.0,  1.0,  0.0}
+  }};
+
+  Std2dArrayAdapter<double,test_array.size(),test_array.size()> adapter;
+
+  // Act.
+  adapter.solve(test_array);
+
+  // Assert.
+  for (unsigned int row = 0; row < dimension; ++row) {
+    for (unsigned int col = 0; col < dimension; ++col) {
+      EXPECT_EQ (etalon_array [row][col], test_array [row][col]);
+    }
+  }
+}
+========== END FILE ==========
+========== FILE: tests/adapters/std_2d_vectortest.cpp ==========
+TYPE: UTF-8
+#include <gtest/gtest.h>
+#include "adapters/std2dvectordapter.h"
+
+
+
+class Adapters_std_2d_vector_Test : public ::testing::Test
+{
+};
+
+TEST_F (Adapters_std_2d_vector_Test, convert_std_2d_vector_to_munkres_matrix_Success)
+{
+  // Arrange.
+  constexpr unsigned int dimension {3};
+  const std::vector <std::vector <double> > test_vector {{
+    {1, 2, 3},
+    {4, 5, 6},
+    {7, 8, 9}
+  }};
+  const Matrix <double> etalon_matrix {
+    {1, 2, 3},
+    {4, 5, 6},
+    {7, 8, 9}
+  };
+
+  Std2dVectorAdapter<double> adapter;
+
+  // Act.
+  const auto test_matrix = adapter.convertToMatrix(test_vector);
+
+  // Assert.
+  for (unsigned int row = 0; row < dimension; ++row) {
+    for (unsigned int col = 0; col < dimension; ++col) {
+      EXPECT_EQ (etalon_matrix (row, col), test_matrix (row, col) );
+    }
+  }
+}
+
+TEST_F (Adapters_std_2d_vector_Test, convert_non_square_std_2d_vector_to_munkres_matrix_Success)
+{
+  // Arrange.
+    constexpr unsigned int dimension1 {2};
+    constexpr unsigned int dimension2 {3};
+  const std::vector <std::vector <double> > test_vector {{
+    {1, 2, 3},
+    {4, 5, 6}
+  }};
+  const Matrix <double> etalon_matrix {
+    {1, 2, 3},
+    {4, 5, 6}
+  };
+
+  Std2dVectorAdapter<double> adapter;
+
+  // Act.
+  const auto test_matrix = adapter.convertToMatrix(test_vector);
+
+  // Assert.
+  for (unsigned int row = 0; row < dimension1; ++row) {
+    for (unsigned int col = 0; col < dimension2; ++col) {
+      EXPECT_EQ (etalon_matrix (row, col), test_matrix (row, col) );
+    }
+  }
+}
+
+TEST_F (Adapters_std_2d_vector_Test, fill_std_2d_vector_from_munkres_matrix_Success)
+{
+  // Arrange.
+  constexpr unsigned int dimension {3};
+  std::vector <std::vector <double> > test_vector {{
+    {0, 0, 0},
+    {0, 0, 0},
+    {0, 0, 0}
+  }};
+  const std::vector <std::vector <double> > etalon_vector {{
+    {1, 2, 3},
+    {4, 5, 6},
+    {7, 8, 9}
+  }};
+  const Matrix <double> etalon_matrix {
+    {1, 2, 3},
+    {4, 5, 6},
+    {7, 8, 9}
+  };
+
+  Std2dVectorAdapter<double> adapter;
+
+  // Act.
+  adapter.convertFromMatrix(test_vector, etalon_matrix);
+
+  // Assert.
+  for (unsigned int row = 0; row < dimension; ++row) {
+    for (unsigned int col = 0; col < dimension; ++col) {
+      EXPECT_EQ (etalon_vector [row][col], test_vector [row][col]);
+    }
+  }
+}
+
+TEST_F (Adapters_std_2d_vector_Test, fill_non_square_std_2d_vector_from_munkres_matrix_Success)
+{
+  // Arrange.
+  constexpr unsigned int dimension1 {2};
+  constexpr unsigned int dimension2 {3};
+  std::vector <std::vector <double> > test_vector {{
+    {0, 0, 0},
+    {0, 0, 0}
+  }};
+  const std::vector <std::vector <double> > etalon_vector {{
+    {1, 2, 3},
+    {4, 5, 6}
+  }};
+  const Matrix <double> etalon_matrix {
+    {1, 2, 3},
+    {4, 5, 6}
+  };
+
+  Std2dVectorAdapter<double> adapter;
+
+  // Act.
+  adapter.convertFromMatrix(test_vector, etalon_matrix);
+
+  // Assert.
+  for (unsigned int row = 0; row < dimension1; ++row) {
+    for (unsigned int col = 0; col < dimension2; ++col) {
+      EXPECT_EQ (etalon_vector [row][col], test_vector [row][col]);
+    }
+  }
+}
+
+TEST_F (Adapters_std_2d_vector_Test, solve_std_2d_vector_Success)
+{
+  // Arrange.
+  constexpr unsigned int dimension {3};
+  std::vector <std::vector <double> > etalon_vector {{
+    {-1.0,  0.0, -1.0},
+    { 0.0, -1.0, -1.0},
+    {-1.0, -1.0,  0.0}
+  }};
+  std::vector <std::vector <double> > test_vector {{
+    {1.0,  0.0,  1.0},
+    {0.0,  1.0,  1.0},
+    {1.0,  1.0,  0.0}
+  }};
+
+  Std2dVectorAdapter<double> adapter;
+
+  // Act.
+  adapter.solve (test_vector);
+
+  // Assert.
+  for (unsigned int row = 0; row < dimension; ++row) {
+    for (unsigned int col = 0; col < dimension; ++col) {
+      EXPECT_EQ (etalon_vector [row][col], test_vector [row][col]);
+    }
+  }
+}
+========== END FILE ==========
+========== FILE: tests/matrixtest.cpp ==========
+TYPE: UTF-8
+#include <gtest/gtest.h>
+#include "matrixtest.h"
+#include <iostream>
+#include <iomanip>
+
+
+
+class MatrixTest : public ::testing::Test
+{
+    protected:
+        virtual void SetUp    ();
+        virtual void TearDown ();
+};
+
+
+
+void MatrixTest::SetUp ()
+{
+}
+
+
+
+void MatrixTest::TearDown ()
+{
+}
+
+
+
+TEST_F (MatrixTest, resize_From1x1To2x2WithDefaultValueDefaulted_Success)
+{
+  // Arrange.
+  Matrix<double> etalon_matrix{
+    {7.0, 0.0},
+    {0.0, 0.0}
+  };
+  Matrix<double> test_matrix{
+    {7.0}
+  };
+
+  // Act.
+  test_matrix.resize (2, 2);
+
+  // Assert.
+  EXPECT_EQ (etalon_matrix, test_matrix);
+}
+
+
+
+TEST_F (MatrixTest, resize_From1x1To5x5WithDefaultValueDefaulted_Success)
+{
+  // Arrange.
+  Matrix<double> etalon_matrix{
+    {7.0, 0.0, 0.0, 0.0, 0.0},
+    {0.0, 0.0, 0.0, 0.0, 0.0},
+    {0.0, 0.0, 0.0, 0.0, 0.0},
+    {0.0, 0.0, 0.0, 0.0, 0.0},
+    {0.0, 0.0, 0.0, 0.0, 0.0}
+  };
+  Matrix<double> test_matrix{
+    {7.0}
+  };
+
+  // Act.
+  test_matrix.resize (5, 5);
+
+  // Assert.
+  EXPECT_EQ (etalon_matrix, test_matrix);
+}
+
+
+
+TEST_F (MatrixTest, resize_From5x5To3x3WithDefaultValueDefaulted_Success)
+{
+  // Arrange.
+  Matrix<double> etalon_matrix{
+    {0.0, 0.1, 0.2},
+    {1.0, 1.1, 1.2},
+    {2.0, 2.1, 2.2}
+  };
+  Matrix<double> test_matrix{
+    {0.0, 0.1, 0.2, 0.3, 0.4},
+    {1.0, 1.1, 1.2, 1.3, 1.4},
+    {2.0, 2.1, 2.2, 2.3, 2.4},
+    {3.0, 3.1, 3.2, 3.3, 3.4},
+    {4.0, 4.1, 4.2, 4.3, 4.4}
+  };
+
+  // Act.
+  test_matrix.resize (3, 3);
+
+  // Assert.
+  EXPECT_EQ (etalon_matrix, test_matrix);
+}
+
+
+
+TEST_F (MatrixTest, resize_From2x2To4x4WithDefaultValueExplicit_Success)
+{
+  // Arrange.
+  Matrix<double> etalon_matrix{
+    {0.0, 0.1, 9.9, 9.9},
+    {1.0, 1.1, 9.9, 9.9},
+    {9.9, 9.9, 9.9, 9.9},
+    {9.9, 9.9, 9.9, 9.9}
+  };
+  Matrix<double> test_matrix{
+    {0.0, 0.1},
+    {1.0, 1.1}
+  };
+
+  // Act.
+  test_matrix.resize (4, 4, 9.9);
+
+  // Assert.
+  EXPECT_EQ (etalon_matrix, test_matrix);
+}
+
+
+
+TEST_F (MatrixTest, clear_1x1_Success)
+{
+  // Arrange.
+  Matrix<double> etalon_matrix{
+    {0.0}
+  };
+  Matrix<double> test_matrix{
+    {7.0}
+  };
+
+  // Act.
+  test_matrix.clear ();
+
+  // Assert.
+  EXPECT_EQ (etalon_matrix, test_matrix);
+}
+
+
+
+TEST_F (MatrixTest, clear_4x4_Success)
+{
+  // Arrange.
+  Matrix<double> etalon_matrix{
+    {0.0, 0.0, 0.0, 0.0},
+    {0.0, 0.0, 0.0, 0.0},
+    {0.0, 0.0, 0.0, 0.0},
+    {0.0, 0.0, 0.0, 0.0}
+  };
+  Matrix<double> test_matrix{
+    {1.1, 1.2, 1.3, 1.4},
+    {2.1, 2.2, 2.3, 2.4},
+    {3.1, 3.2, 3.3, 3.4},
+    {4.1, 4.2, 4.3, 4.4}
+  };
+
+  // Act.
+  test_matrix.clear ();
+
+  // Assert.
+  EXPECT_EQ (etalon_matrix, test_matrix);
+}
+
+
+
+TEST_F (MatrixTest, operatorAssignment_0x0_Success)
+{
+  // Arrange.
+  Matrix<double> etalon_matrix {std::initializer_list <std::initializer_list <double> > () };
+  Matrix<double> test_matrix{
+    {0.0, 0.1, 0.2},
+    {3.0, 3.1, 3.2},
+    {4.0, 4.1, 4.2}
+  };
+
+  // Act.
+  test_matrix = etalon_matrix;
+
+  // Assert.
+  EXPECT_EQ (etalon_matrix, test_matrix);
+}
+
+
+
+TEST_F (MatrixTest, operatorAssignment_3x3_Success)
+{
+  // Arrange.
+  Matrix<double> etalon_matrix{
+    {0.0, 0.1, 0.2},
+    {1.0, 1.1, 1.2},
+    {2.0, 2.1, 2.2}
+  };
+  Matrix<double> test_matrix;
+
+  // Act.
+  test_matrix = etalon_matrix;
+
+  // Assert.
+  EXPECT_EQ (etalon_matrix, test_matrix);
+}
+
+
+
+TEST_F (MatrixTest, operatorSubscript_Success)
+{
+  // Arrange.
+  Matrix<double> test_matrix{
+    {0.0, 0.1, 0.2},
+    {1.0, 1.1, 1.2},
+    {2.0, 2.1, 2.2}
+  };
+
+  // Act, Assert.
+  EXPECT_FLOAT_EQ (0.0, test_matrix (0, 0) );
+  EXPECT_FLOAT_EQ (0.1, test_matrix (0, 1) );
+  EXPECT_FLOAT_EQ (0.2, test_matrix (0, 2) );
+  EXPECT_FLOAT_EQ (1.0, test_matrix (1, 0) );
+  EXPECT_FLOAT_EQ (1.1, test_matrix (1, 1) );
+  EXPECT_FLOAT_EQ (1.2, test_matrix (1, 2) );
+  EXPECT_FLOAT_EQ (2.0, test_matrix (2, 0) );
+  EXPECT_FLOAT_EQ (2.1, test_matrix (2, 1) );
+  EXPECT_FLOAT_EQ (2.2, test_matrix (2, 2) );
+}
+
+
+
+TEST_F (MatrixTest, max_1x1_Success)
+{
+  // Arrange.
+  Matrix<double> test_matrix{
+    {0.0}
+  };
+  constexpr double etalon_result {0.0};
+
+  // Act.
+  const double test_result = test_matrix.max ();
+
+  // Assert.
+  EXPECT_FLOAT_EQ (etalon_result, test_result);
+}
+
+
+
+TEST_F (MatrixTest, max_2x2MinusInfinity_Success)
+{
+  // Arrange.
+  constexpr auto minusInfinity = - std::numeric_limits <double>::infinity ();
+  Matrix<double> test_matrix{
+    {minusInfinity, minusInfinity},
+    {minusInfinity, minusInfinity}
+  };
+  constexpr double etalon_result {minusInfinity};
+
+  // Act.
+  const double test_result = test_matrix.max ();
+
+  // Assert.
+  EXPECT_FLOAT_EQ (etalon_result, test_result);
+}
+
+
+
+TEST_F (MatrixTest, max_2x2Negative_Success)
+{
+  // Arrange.
+  constexpr auto minusInfinity = - std::numeric_limits <double>::infinity ();
+  constexpr auto negativeValue =   std::numeric_limits <double>::min ();
+  Matrix<double> test_matrix{
+    {negativeValue, minusInfinity},
+    {minusInfinity, negativeValue}
+  };
+  constexpr double etalon_result {negativeValue};
+
+  // Act.
+  const double test_result = test_matrix.max ();
+
+  // Assert.
+  EXPECT_FLOAT_EQ (etalon_result, test_result);
+}
+
+
+
+TEST_F (MatrixTest, max_2x2Zero_Success)
+{
+  // Arrange.
+  constexpr auto minusInfinity = - std::numeric_limits <double>::infinity ();
+  constexpr auto negativeValue =   std::numeric_limits <double>::min ();
+  Matrix<double> test_matrix{
+    {          0.0, minusInfinity},
+    {minusInfinity, negativeValue}
+  };
+  constexpr double etalon_result {0.0};
+
+  // Act.
+  const double test_result = test_matrix.max ();
+
+  // Assert.
+  EXPECT_FLOAT_EQ (etalon_result, test_result);
+}
+
+
+
+TEST_F (MatrixTest, max_2x2Positive_Success)
+{
+  // Arrange.
+  constexpr auto minusInfinity = - std::numeric_limits <double>::infinity ();
+  constexpr auto negativeValue =   std::numeric_limits <double>::min ();
+  constexpr auto positiveValue =   std::numeric_limits <double>::max ();
+  Matrix<double> test_matrix{
+    {negativeValue, minusInfinity},
+    {positiveValue,           0.0}
+  };
+  constexpr double etalon_result {positiveValue};
+
+  // Act.
+  const double test_result = test_matrix.max ();
+
+  // Assert.
+  EXPECT_FLOAT_EQ (etalon_result, test_result);
+}
+
+
+
+TEST_F (MatrixTest, max_2x2PlusInfinity_Success)
+{
+  // Arrange.
+  constexpr auto minusInfinity = - std::numeric_limits <double>::infinity ();
+  constexpr auto negativeValue =   std::numeric_limits <double>::min ();
+  constexpr auto positiveValue =   std::numeric_limits <double>::max ();
+  constexpr auto plusInfinity  =   std::numeric_limits <double>::infinity ();
+  Matrix<double> test_matrix{
+    {minusInfinity, positiveValue},
+    {negativeValue, plusInfinity}
+  };
+  constexpr double etalon_result {plusInfinity};
+
+  // Act.
+  const double test_result = test_matrix.max ();
+
+  // Assert.
+  EXPECT_FLOAT_EQ (etalon_result, test_result);
+}
+
+
+
+TEST_F (MatrixTest, minsize_RowsCountIsMin_Success)
+{
+  // Arrange.
+  Matrix<double> test_matrix (1u, 2u);
+  constexpr unsigned int etalon_result {1u};
+
+  // Act.
+  const unsigned int test_result = test_matrix.minsize ();
+
+  // Assert.
+  EXPECT_EQ (etalon_result, test_result);
+}
+
+
+
+TEST_F (MatrixTest, minsize_ColumnsCountIsMin_Success)
+{
+  // Arrange.
+  Matrix<double> test_matrix (2u, 1u);
+  constexpr unsigned int etalon_result {1u};
+
+  // Act.
+  const unsigned int test_result = test_matrix.minsize ();
+
+  // Assert.
+  EXPECT_EQ (etalon_result, test_result);
+}
+
+
+
+TEST_F (MatrixTest, minsize_RowsCountAndColumnsCountAreEqual_Success)
+{
+  // Arrange.
+  Matrix<double> test_matrix (3u, 3u);
+  constexpr unsigned int etalon_result {3u};
+
+  // Act.
+  const unsigned int test_result = test_matrix.minsize ();
+
+  // Assert.
+  EXPECT_EQ (etalon_result, test_result);
+}
+
+
+
+TEST_F (MatrixTest, columns_Success)
+{
+  // Arrange.
+  Matrix<double> test_matrix{
+    {0.0, 0.1, 0.2},
+    {1.0, 1.1, 1.2},
+    {2.0, 2.1, 2.2}
+  };
+  constexpr unsigned int etalon_result {3u};
+
+  // Act.
+  const unsigned int test_result = test_matrix.columns ();
+
+  // Assert.
+  EXPECT_EQ (etalon_result, test_result);
+}
+
+
+
+TEST_F (MatrixTest, rows_Success)
+{
+  // Arrange.
+  Matrix<double> test_matrix{
+    {0.0, 0.1, 0.2},
+    {1.0, 1.1, 1.2},
+    {2.0, 2.1, 2.2}
+  };
+  constexpr unsigned int etalon_result {3u};
+
+  // Act.
+  const unsigned int test_result = test_matrix.rows ();
+
+  // Assert.
+  EXPECT_EQ (etalon_result, test_result);
+}
+========== END FILE ==========
+========== FILE: tests/matrixtest.h ==========
+TYPE: UTF-8
+/*
+ *   Copyright (c) 2007 John Weaver
+ *
+ *   This program is free software; you can redistribute it and/or modify
+ *   it under the terms of the GNU General Public License as published by
+ *   the Free Software Foundation; either version 2 of the License, or
+ *   (at your option) any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *   GNU General Public License for more details.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program; if not, write to the Free Software
+ *   Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
+ */
+
+#if !defined(_MATRIX_TEST_H_)
+#define _MATRIX_TEST_H_
+
+#include "matrix.h"
+#include <iostream>
+
+template <class T>
+bool operator == (const Matrix <T> & a, const Matrix <T> & b)
+{
+    if (a.rows () != b.rows () || a.columns () != b.columns () ) {
+        return false;
+    }
+
+    for (unsigned int row = 0; row < a.rows (); ++row) {
+        for (unsigned int col = 0; col < a.columns (); ++col) {
+            if (a (row, col) != b (row, col) ) {
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+
+
+
+template <class T>
+bool operator != (const Matrix <T> & a, const Matrix <T> & b)
+{
+    return ! (a == b);
+}
+
+
+
+template <class T>
+std::ostream & operator << (std::ostream & os, const Matrix <T> & m)
+{
+    const std::string indent ("           ");
+    os << "Matrix (" << & m << ") of " << m.rows () << "x" << m.columns () << std::endl;
+    for (unsigned int row = 0; row < m.rows (); ++row) {
+        os << indent;
+        for (unsigned int col = 0; col < m.columns (); ++col) {
+            os << std::setw (4) << std::setfill (' ') <<  m (row, col) << " ";
+        }
+        os << std::endl;
+    }
+
+    return os;
+}
+
+#endif /* !defined(_MATRIX_TEST_H_) */
+
+========== END FILE ==========
+========== FILE: tests/munkrestest.cpp ==========
+TYPE: UTF-8
+#include <gtest/gtest.h>
+#include "munkres.h"
+#include "matrixtest.h"
+#include <iostream>
+#include <iomanip>
+
+class MunkresTest : public ::testing::Test
+{
+    protected:
+        virtual void SetUp    ();
+        virtual void TearDown ();
+
+        Matrix <double> generateRandomMatrix    (const int, const int);
+        void            isSingleSolution        (Matrix <double> &);
+        void            isValidOutput           (Matrix <double> &);
+};
+
+
+
+void MunkresTest::SetUp ()
+{
+}
+
+
+
+void MunkresTest::TearDown ()
+{
+}
+
+
+
+Matrix<double> MunkresTest::generateRandomMatrix(const int nrows, const int ncols)
+{
+  Matrix<double> matrix(nrows, ncols);
+
+  srandom(time(nullptr)); // Seed random number generator.
+
+  // Initialize matrix with random values.
+  for ( unsigned int row = 0 ; row < matrix.rows() ; row++ )
+    for ( unsigned int col = 0 ; col < matrix.columns() ; col++ )
+      matrix(row,col) = (double)random();
+
+  return matrix;
+}
+
+
+
+void MunkresTest::isSingleSolution (Matrix <double> & matrix)
+{
+  for ( unsigned int row = 0 ; row < matrix.rows() ; row++ ) {
+    int columnsolutioncount = 0;
+    for ( unsigned int col = 0 ; col < matrix.columns() ; col++ )
+      if ( matrix(row,col) == 0 )
+        columnsolutioncount++;
+    EXPECT_EQ ( columnsolutioncount, 1 );
+  }
+
+  for ( unsigned int col = 0 ; col < matrix.columns() ; col++ ) {
+    int rowsolutioncount = 0;
+    for ( unsigned int row = 0 ; row < matrix.rows() ; row++ )
+      if ( matrix(row,col) == 0 )
+        rowsolutioncount++;
+    EXPECT_EQ ( rowsolutioncount, 1 );
+  }
+}
+
+
+
+void MunkresTest::isValidOutput (Matrix <double> & matrix)
+{
+  for ( unsigned int row = 0 ; row < matrix.rows() ; row++ )
+    for ( unsigned int col = 0 ; col < matrix.columns() ; col++ )
+      EXPECT_TRUE ( matrix(row,col) == 0 || matrix(row,col) == -1 );
+}
+
+
+
+TEST_F (MunkresTest, replace_infinites_4x4Case001_Success)
+{
+  // Arrange.
+  const auto infinity = std::numeric_limits<double>::infinity();
+  Matrix<double> etalon_matrix{
+    { 1.0,      0.0,      3.0,      2.0},
+    { 3.0,     -2.0,     -1.0,      0.0},
+    {-1.0,      3.0,      2.0,      0.0},
+    {-1.0,      0.0,      2.0,      3.0}
+  };
+  Matrix<double> test_matrix{
+    { 1.0,      0.0,     infinity,  2.0},
+    {infinity, -2.0,     -1.0,      0.0},
+    {-1.0,     infinity,  2.0,      0.0},
+    {-1.0,      0.0,      2.0, infinity}
+  };
+
+  // Act.
+  Munkres<double>::replace_infinites (test_matrix);
+
+  // Assert.
+  EXPECT_EQ (etalon_matrix, test_matrix);
+}
+
+
+
+TEST_F (MunkresTest, replace_infinites_4x4Case002_Success)
+{
+  // Arrange.
+  const auto infinity = std::numeric_limits<double>::infinity();
+  Matrix<double> etalon_matrix{
+    { 3.0,      0.0,      3.0,      2.0},
+    { 3.0,     -2.0,     -1.0,      3.0},
+    {-1.0,      3.0,      2.0,      3.0},
+    {-1.0,      3.0,      2.0,      3.0}
+  };
+  Matrix<double> test_matrix{
+    {infinity,  0.0,     infinity,  2.0},
+    {infinity, -2.0,     -1.0, infinity},
+    {-1.0,     infinity,  2.0, infinity},
+    {-1.0,     infinity,  2.0, infinity}
+  };
+
+  // Act.
+  Munkres<double>::replace_infinites(test_matrix);
+
+  // Assert.
+  EXPECT_EQ (etalon_matrix, test_matrix);
+}
+
+
+
+TEST_F (MunkresTest, replace_infinites_4x4Case003_Success)
+{
+  // Arrange.
+  const auto infinity = std::numeric_limits<double>::infinity();
+  Matrix<double> etalon_matrix{
+    {-5.0,     -4.0,     -1.0,     -2.0},
+    {-1.0,     -2.0,     -5.0,     -4.0},
+    {-5.0,     -1.0,     -2.0,     -4.0},
+    {-5.0,     -4.0,     -2.0,     -1.0}
+  };
+  Matrix<double> test_matrix{
+    {-5.0,     -4.0,     infinity, -2.0},
+    {infinity, -2.0,     -5.0,     -4.0},
+    {-5.0,     infinity, -2.0,     -4.0},
+    {-5.0,     -4.0,     -2.0, infinity}
+  };
+
+  // Act.
+  Munkres<double>::replace_infinites (test_matrix);
+
+  // Assert.
+  EXPECT_EQ (etalon_matrix, test_matrix);
+}
+
+
+
+TEST_F (MunkresTest, replace_infinites_4x4Case004_Success)
+{
+  // Arrange.
+  const auto infinity = std::numeric_limits<double>::infinity();
+  Matrix<double> etalon_matrix{
+    { 1.0,      0.0,      3.0,      2.0},
+    { 3.0,     -2.0,     -1.0,      0.0},
+    {-1.0,      3.0,      0.0,      0.0},
+    {-1.0,      0.0,      0.0,      3.0}
+  };
+  Matrix<double> test_matrix{
+    { 1.0,      0.0,     infinity,  2.0},
+    {infinity, -2.0,     -1.0,      0.0},
+    {-1.0,     infinity,  0.0,      0.0},
+    {-1.0,      0.0,      0.0, infinity}
+  };
+
+  // Act.
+  Munkres<double>::replace_infinites (test_matrix);
+
+  // Assert.
+  EXPECT_EQ (etalon_matrix, test_matrix);
+}
+
+
+
+TEST_F (MunkresTest, replace_infinites_4x4Case005_Success)
+{
+  // Arrange.
+  const auto infinity = std::numeric_limits<double>::infinity();
+  Matrix<double> etalon_matrix{
+    {     0.0,      0.0,      0.0,      0.0},
+    {     0.0,      0.0,      0.0,      0.0},
+    {     0.0,      0.0,      0.0,      0.0},
+    {     0.0,      0.0,      0.0,      0.0}
+  };
+  Matrix<double> test_matrix{
+    {infinity, infinity, infinity, infinity},
+    {infinity, infinity, infinity, infinity},
+    {infinity, infinity, infinity, infinity},
+    {infinity, infinity, infinity, infinity}
+  };
+
+  // Act.
+  Munkres<double>::replace_infinites (test_matrix);
+
+  // Assert.
+  EXPECT_EQ (etalon_matrix, test_matrix);
+}
+
+
+
+TEST_F (MunkresTest, minimize_along_direction_5x5_OverRowsOnly_Success)
+{
+  // Arrange.
+  Matrix<double> etalon_matrix{
+    { 1.0,  0.0,  3.0,  2.0,  4.0},
+    { 3.0, -2.0, -1.0,  0.0,  4.0},
+    {-1.0,  3.0,  2.0,  1.0,  2.0},
+    { 0.0,  2.0,  1.0,  0.0,  3.0},
+    { 0.0,  1.0,  1.0,  0.0,  2.0}
+  };
+  Matrix<double> test_matrix{
+    { 1.0,  0.0,  3.0,  2.0,  4.0},
+    { 3.0, -2.0, -1.0,  0.0,  4.0},
+    {-1.0,  3.0,  2.0,  1.0,  2.0},
+    { 1.0,  3.0,  2.0,  1.0,  4.0},
+    { 2.0,  3.0,  3.0,  2.0,  4.0}
+  };
+
+  // Act.
+  Munkres<double>::minimize_along_direction(test_matrix, false);
+
+  // Assert.
+  EXPECT_EQ (etalon_matrix, test_matrix);
+}
+
+
+
+TEST_F (MunkresTest, minimize_along_direction_5x5_OverColumnsOnly_Success)
+{
+  // Arrange.
+  Matrix<double> etalon_matrix{
+    { 1.0,  0.0,  3.0,  2.0,  2.0},
+    { 3.0, -2.0, -1.0,  0.0,  2.0},
+    {-1.0,  3.0,  2.0,  1.0,  0.0},
+    { 1.0,  3.0,  2.0,  1.0,  2.0},
+    { 2.0,  3.0,  3.0,  2.0,  2.0}
+  };
+  Matrix<double> test_matrix{
+    { 1.0,  0.0,  3.0,  2.0,  4.0},
+    { 3.0, -2.0, -1.0,  0.0,  4.0},
+    {-1.0,  3.0,  2.0,  1.0,  2.0},
+    { 1.0,  3.0,  2.0,  1.0,  4.0},
+    { 2.0,  3.0,  3.0,  2.0,  4.0}
+  };
+
+  // Act.
+  Munkres<double>::minimize_along_direction(test_matrix, true);
+
+  // Assert.
+  EXPECT_EQ (etalon_matrix, test_matrix);
+}
+
+
+
+TEST_F (MunkresTest, minimize_along_direction_5x5_OverRowsAndColumns_Success)
+{
+  // Arrange.
+  Matrix<double> etalon_matrix{
+    { 1.0,  0.0,  3.0,  2.0,  2.0},
+    { 3.0, -2.0, -1.0,  0.0,  2.0},
+    {-1.0,  3.0,  2.0,  1.0,  0.0},
+    { 0.0,  2.0,  1.0,  0.0,  1.0},
+    { 0.0,  1.0,  1.0,  0.0,  0.0}
+  };
+  Matrix<double> test_matrix{
+    { 1.0,  0.0,  3.0,  2.0,  4.0},
+    { 3.0, -2.0, -1.0,  0.0,  4.0},
+    {-1.0,  3.0,  2.0,  1.0,  2.0},
+    { 1.0,  3.0,  2.0,  1.0,  4.0},
+    { 2.0,  3.0,  3.0,  2.0,  4.0}
+  };
+
+  // Act.
+  Munkres<double>::minimize_along_direction(test_matrix, false);
+  Munkres<double>::minimize_along_direction(test_matrix, true);
+
+  // Assert.
+  EXPECT_EQ (etalon_matrix, test_matrix);
+}
+
+
+
+TEST_F (MunkresTest, solve_5x5_IsSingleSolution_Success)
+{
+    // Arrange.
+    Matrix<double> matrix = generateRandomMatrix(5, 5);
+    Munkres<double> munkres;
+
+    // Act.
+    munkres.solve(matrix);
+
+    // Assert.
+    isSingleSolution(matrix);
+}
+
+
+
+TEST_F (MunkresTest, solve_10x10_IsSingleSolution_Success)
+{
+    // Arrange.
+  Matrix<double> matrix = generateRandomMatrix(10, 10);
+  Munkres<double> munkres;
+
+    // Act.
+  munkres.solve(matrix);
+
+    // Assert.
+  isSingleSolution(matrix);
+}
+
+
+
+TEST_F (MunkresTest, solve_50x50_IsSingleSolution_Success)
+{
+    // Arrange.
+  Matrix<double> matrix = generateRandomMatrix(50, 50);
+  Munkres<double> munkres;
+
+    // Act.
+  munkres.solve(matrix);
+
+    // Assert.
+  isSingleSolution(matrix);
+}
+
+
+
+TEST_F (MunkresTest, solve_100x100_IsSingleSolution_Success)
+{
+    // Arrange.
+  Matrix<double> matrix = generateRandomMatrix(100, 100);
+  Munkres<double> munkres;
+
+    // Act.
+  munkres.solve(matrix);
+
+    // Assert.
+  isSingleSolution(matrix);
+}
+
+
+
+TEST_F (MunkresTest, solve_200x200_IsSingleSolution_Success)
+{
+    // Arrange.
+  Matrix<double> matrix = generateRandomMatrix(200, 200);
+  Munkres<double> munkres;
+
+    // Act.
+  munkres.solve(matrix);
+
+    // Assert.
+  isSingleSolution(matrix);
+}
+
+
+
+TEST_F (MunkresTest, solve_10x10_IsValideOutput_Success)
+{
+  // Arrange.
+  Matrix<double> matrix = generateRandomMatrix(10, 10);
+  Munkres<double> munkres;
+
+  // Act.
+  munkres.solve(matrix);
+
+  // Assert.
+  isValidOutput (matrix);
+}
+
+
+
+TEST_F (MunkresTest, solve_1x1_ObviousSolution_Success)
+{
+  // Arrange.
+  Matrix<double> etalon_matrix{
+    {0.0}
+  };
+  Matrix<double> test_matrix{
+    {0.0}
+  };
+
+  Munkres<double> munkres;
+
+  // Act.
+  munkres.solve(test_matrix);
+
+  // Assert.
+  EXPECT_EQ (etalon_matrix, test_matrix);
+}
+
+
+
+TEST_F (MunkresTest, solve_2x2_ObviousSolution_Success)
+{
+  // Arrange.
+  Matrix<double> etalon_matrix{
+    {-1.0,  0.0},
+    { 0.0, -1.0}
+  };
+  Matrix<double> test_matrix{
+    {1.0,  0.0},
+    {0.0,  1.0}
+  };
+
+  Munkres<double> munkres;
+
+  // Act.
+  munkres.solve(test_matrix);
+
+  // Assert.
+  EXPECT_EQ (etalon_matrix, test_matrix);
+}
+
+
+
+TEST_F (MunkresTest, solve_3x3_ObviousSolution_Success)
+{
+  // Arrange.
+  Matrix<double> etalon_matrix{
+    {-1.0,  0.0, -1.0},
+    { 0.0, -1.0, -1.0},
+    {-1.0, -1.0,  0.0}
+  };
+  Matrix<double> test_matrix{
+    {1.0,  0.0,  1.0},
+    {0.0,  1.0,  1.0},
+    {1.0,  1.0,  0.0}
+  };
+
+  Munkres<double> munkres;
+
+  // Act.
+  munkres.solve(test_matrix);
+
+  // Assert.
+  EXPECT_EQ (etalon_matrix, test_matrix);
+}
+
+
+
+TEST_F (MunkresTest, solve_3x2_NonObviousSolutionCase001_Success)
+{
+  // Arrange.
+  Matrix<double> etalon_matrix{
+    {-1.0,  0.0},
+    { 0.0, -1.0},
+    {-1.0, -1.0}
+  };
+  Matrix<double> test_matrix{
+    {1.0,  2.0},
+    {0.0,  9.0},
+    {9.0,  9.0}
+  };
+
+  Munkres<double> munkres;
+
+  // Act.
+  munkres.solve(test_matrix);
+
+  // Assert.
+  EXPECT_EQ (etalon_matrix, test_matrix);
+}
+
+
+
+// This is simplified version of test case #008.
+TEST_F (MunkresTest, solve_3x2_NonObviousSolutionCase002_Success)
+{
+  // Arrange.
+  Matrix<double> etalon_matrix{
+    {-1.0, -1.0},
+    { 0.0, -1.0},
+    {-1.0,  0.0}
+  };
+  Matrix<double> test_matrix{
+    {1.0e+17, 3},
+    {2,       1.0e+17},
+    {4,       1}
+  };
+
+  Munkres<double> munkres;
+
+  // Act.
+  munkres.solve(test_matrix);
+
+  // Assert.
+  EXPECT_EQ (etalon_matrix, test_matrix);
+}
+
+
+
+// This is simplified version of test case #009 (transposed version of test case 002).
+TEST_F (MunkresTest, solve_2x3_NonObviousSolutionCase003_Success)
+{
+  // Arrange.
+  Matrix<double> etalon_matrix{
+    {-1.0,  0.0, -1.0},
+    {-1.0, -1.0,  0.0}
+  };
+  Matrix<double> test_matrix{
+    {1.0e+17, 2,       4},
+    {3,       1.0e+17, 1}
+  };
+
+  Munkres<double> munkres;
+
+  // Act.
+  munkres.solve(test_matrix);
+
+  // Assert.
+  EXPECT_EQ (etalon_matrix, test_matrix);
+}
+
+
+
+// This is test case based on test case #002, but extended by one "impossible" task and one "lazy" worker.
+TEST_F (MunkresTest, solve_4x3_NonObviousSolutionCase004_Success)
+{
+  // Arrange.
+  Matrix<double> etalon_matrix{
+    {-1.0, -1.0, -1.0},
+    { 0.0, -1.0, -1.0},
+    {-1.0, -1.0,  0.0},
+    {-1.0,  0.0, -1.0}
+  };
+  Matrix<double> test_matrix{
+    {1.0e+17, 3,       1.0e+17},
+    {2,       1.0e+17, 1.0e+17},
+    {1.0e+17, 1.0e+17, 1.0e+17},
+    {4,       1,       1.0e+17}
+  };
+
+  Munkres<double> munkres;
+
+  // Act.
+  munkres.solve(test_matrix);
+
+  // Assert.
+  EXPECT_EQ (etalon_matrix (1, 0), test_matrix (1, 0) );
+  EXPECT_EQ (etalon_matrix (3, 1), test_matrix (3, 1) );
+}
+
+
+
+// This is test case based on test case #003, but extended by one "impossible" task and one "lazy" worker.
+TEST_F (MunkresTest, solve_3x4_NonObviousSolutionCase005_Success)
+{
+  // Arrange.
+  Matrix<double> etalon_matrix{
+    {-1.0,  0.0, -1.0, -1.0},
+    {-1.0, -1.0, -1.0,  0.0},
+    {-1.0, -1.0,  0.0, -1.0}
+  };
+  Matrix<double> test_matrix{
+    {1.0e+17, 2,       1.0e17, 4},
+    {3,       1.0e+17, 1.0e17, 1},
+    {1.0e+17, 1.0e+17, 1.0e17, 1.0e+17}
+  };
+
+  Munkres<double> munkres;
+
+  // Act.
+  munkres.solve(test_matrix);
+
+  // Assert.
+  EXPECT_EQ (etalon_matrix (0, 1), test_matrix (0, 1) );
+  EXPECT_EQ (etalon_matrix (1, 3), test_matrix (1, 3) );
+}
+
+
+
+TEST_F (MunkresTest, solve_3x3_NonObviousSolutionCase006_Success)
+{
+  // Arrange.
+  Matrix<double> etalon_matrix{
+    {-1.0,  0.0, -1.0},
+    { 0.0, -1.0, -1.0},
+    {-1.0, -1.0,  0.0}
+  };
+  Matrix<double> test_matrix{
+    {1.0,  2.0,  1.0},
+    {0.0,  9.0,  9.0},
+    {9.0,  9.0,  0.0}
+  };
+
+  Munkres<double> munkres;
+
+  // Act.
+  munkres.solve(test_matrix);
+
+  // Assert.
+  EXPECT_EQ (etalon_matrix, test_matrix);
+}
+
+
+
+TEST_F (MunkresTest, solve_3x3_NonObviousSolutionCase007_Success)
+{
+  // Arrange.
+  Matrix<double> etalon_matrix{
+    {-1.0, -1.0,  0.0},
+    {-1.0,  0.0, -1.0},
+    { 0.0, -1.0, -1.0}
+  };
+  Matrix<double> test_matrix{
+    {0.0,  0.0,  4.0},
+    {4.0,  3.0,  9.0},
+    {3.0,  4.0,  9.0}
+  };
+
+  Munkres<double> munkres;
+
+  // Act.
+  munkres.solve(test_matrix);
+
+  // Assert.
+  EXPECT_EQ (etalon_matrix, test_matrix);
+}
+
+
+
+TEST_F (MunkresTest, solve_6x4_NonObviousSolutionCase008_Success)
+{
+  // Arrange.
+  Matrix<double> etalon_matrix{
+    {-1.0, -1.0, -1.0, -1.0},
+    { 0.0, -1.0, -1.0, -1.0},
+    {-1.0,  0.0, -1.0, -1.0},
+    {-1.0, -1.0, -1.0, -1.0},
+    {-1.0, -1.0, -1.0,  0.0},
+    {-1.0, -1.0,  0.0, -1.0}
+  };
+  Matrix<double> test_matrix{
+    {1.79769e+308, 7.33184e+08,  9.41561e+08,  2.79247e+08},
+    {3.06449e+08,  1.79769e+308, 3.3464e+08,   7.06878e+08},
+    {9.93296e+08,  1.9414e+08,   1.79769e+308, 1.14174e+08},
+    {3.51623e+08,  2.48635e+08,  7.81242e+08,  1.79769e+308},
+    {7.02639e+08,  8.51663e+08,  9.37382e+08,  4.96945e+07},
+    {7.58851e+08,  8.58445e+08,  8.7235e+07,   5.47076e+08}
+  };
+
+  Munkres<double> munkres;
+
+  // Act.
+  munkres.solve(test_matrix);
+
+  // Assert.
+  EXPECT_EQ (etalon_matrix, test_matrix);
+}
+
+
+
+TEST_F (MunkresTest, solve_4x6_NonObviousSolutionCase009_Success)
+{
+  // Arrange.
+  Matrix<double> etalon_matrix{
+    {-1.0,  0.0, -1.0, -1.0, -1.0, -1.0},
+    {-1.0, -1.0,  0.0, -1.0, -1.0, -1.0},
+    {-1.0, -1.0, -1.0, -1.0, -1.0,  0.0},
+    {-1.0, -1.0, -1.0, -1.0,  0.0, -1.0}
+  };
+  Matrix<double> test_matrix{
+    {1.79769e+308, 3.06449e+08,  9.93296e+08,  3.51623e+08,  7.02639e+08,  7.58851e+08},
+    {7.33184e+08,  1.79769e+308, 1.9414e+08,   2.48635e+08,  8.51663e+08,  8.58445e+08},
+    {9.41561e+08,  3.3464e+08,   1.79769e+308, 7.81242e+08,  9.37382e+08,  8.7235e+07},
+    {2.79247e+08,  7.06878e+08,  1.14174e+08,  1.79769e+308, 4.96945e+07,  5.47076e+08}
+  };
+
+  Munkres<double> munkres;
+
+  // Act.
+  munkres.solve(test_matrix);
+
+  // Assert.
+  EXPECT_EQ (etalon_matrix, test_matrix);
+}
+
+
+
+TEST_F (MunkresTest, solve_3x3_IsValide_Fail)
+{
+  // Arrange.
+  Matrix<double> etalon_matrix{
+    { 0.0, -1.0, -1.0},
+    //  ^     ^
+    //  |     |
+    // Wrong Wrong
+    { 0.0, -1.0, -1.0},
+    {-1.0, -1.0,  0.0}
+  };
+  Matrix<double> test_matrix{
+    {1.0,  0.0,  1.0},
+    {0.0,  1.0,  1.0},
+    {1.0,  1.0,  0.0}
+  };
+
+  Munkres<double> munkres;
+
+  // Act.
+  munkres.solve(test_matrix);
+
+  // Assert.
+  EXPECT_NE (etalon_matrix, test_matrix);
+}
+========== END FILE ==========
