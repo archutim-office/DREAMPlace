@@ -1,0 +1,105 @@
+========== FILE: .gitignore ==========
+TYPE: UTF-8
+ispd2005
+ispd2015
+========== END FILE ==========
+========== FILE: CMakeLists.txt ==========
+TYPE: UTF-8
+cmake_minimum_required(VERSION 3.0.2)
+
+project(benchmarks)
+
+file(GLOB INSTALL_SRCS "${CMAKE_CURRENT_SOURCE_DIR}/*.py")
+install(
+    FILES ${INSTALL_SRCS} DESTINATION ${PROJECT_NAME}
+    )
+========== END FILE ==========
+========== FILE: iccad2015.hs.md ==========
+TYPE: UTF-8
+
+Please download ICCAD2015.hs benchmarks for timing-driven placement guided with HeteroSTA from the following link: 
+
+https://drive.google.com/file/d/1HsAW_qcRje_-Ex1anWqAEQOKpGeCxpZa/view?usp=sharing
+========== END FILE ==========
+========== FILE: iccad2015.ot.md ==========
+TYPE: UTF-8
+
+Please download ICCAD2015.ot benchmarks for timing-driven placement from the following link: 
+
+https://drive.google.com/file/d/1xeauwLR9lOxnYvsK2JGPSY0INQh8VuE4/view?usp=sharing
+========== END FILE ==========
+========== FILE: ispd2005_2015.py ==========
+TYPE: UTF-8
+##
+# @file   ispd2005_2015.py
+# @author Yibo Lin, Zixuan Jiang, Jiaqi Gu
+# @date   Mar 2019
+#
+
+import os
+import sys
+from pyunpack import Archive
+if sys.version_info[0] < 3:
+    import urllib2 as urllib
+    from StringIO import StringIO
+else:
+    import urllib.request as urllib
+    from io import BytesIO as StringIO
+
+baseURL = "http://www.cerc.utexas.edu/~zixuan/"
+target_dir = os.path.dirname(os.path.abspath(__file__))
+filenames = ["ispd2005dp.tar.xz", "ispd2015dp.tar.xz"]
+
+for filename in filenames:
+    file_url = baseURL + filename
+    path_to_file = os.path.join(target_dir, filename)
+
+    print("Download from %s to %s" % (file_url, path_to_file))
+    response = urllib.urlopen(file_url)
+    content = response.read()
+    with open(path_to_file, 'wb') as f:
+        f.write(content)
+
+    print("Uncompress %s to %s" % (path_to_file, target_dir))
+    Archive(path_to_file).extractall(target_dir)
+
+    print("remove downloaded file %s" % (path_to_file))
+    os.remove(path_to_file)
+========== END FILE ==========
+========== FILE: ispd2019.py ==========
+TYPE: UTF-8
+import os
+import sys
+from pyunpack import Archive
+if sys.version_info[0] < 3:
+    import urllib2 as urllib
+    from StringIO import StringIO
+else:
+    import urllib.request as urllib
+    from io import BytesIO as StringIO
+
+baseURL = "http://www.ispd.cc/contests/19/benchmarks/"
+target_dir = os.path.dirname(os.path.abspath(__file__))
+filenames = [f"ispd19_test{i}.tgz" for i in range(1, 11)]
+ispd19_dir = os.path.join(target_dir, "ispd2019")
+try:
+    os.mkdir(ispd19_dir)
+except:
+    pass
+
+for filename in filenames:
+    file_url = baseURL + filename
+    path_to_file = os.path.join(target_dir, filename)
+
+    print("Download from %s to %s" % (file_url, path_to_file))
+    response = urllib.urlopen(file_url)
+    content = response.read()
+    with open(path_to_file, 'wb') as f:
+        f.write(content)
+
+    print("Uncompress %s to %s" % (path_to_file, ispd19_dir))
+    Archive(path_to_file).extractall(ispd19_dir)
+
+    print("remove downloaded file %s" % (path_to_file))
+    os.remove(path_to_file)
+========== END FILE ==========
